@@ -10,6 +10,7 @@ import User, { AccountStatus, UserRole } from '~/models/schemas/User.schema'
 import databaseService from '~/services/database.services'
 import { hashPassword } from '~/utils/crypto'
 import { signToken, verifyToken } from '~/utils/jwt'
+import { SignOptions } from 'jsonwebtoken'
 
 config()
 
@@ -17,9 +18,16 @@ const MAX_LOGIN_ATTEMPTS = 5
 const ACCOUNT_LOCK_MINUTES = 5
 const REMEMBER_ME_SECONDS = 30 * 24 * 60 * 60
 
+const parseExpiresIn = (value: string | undefined, fallbackSeconds: number): SignOptions['expiresIn'] => {
+  if (!value || value.trim() === '') return fallbackSeconds
+  const normalized = value.trim()
+  const asNumber = Number(normalized)
+  return Number.isNaN(asNumber) ? (normalized as SignOptions['expiresIn']) : asNumber
+}
+
 class UsersService {
   private getDefaultRefreshTokenExpiresIn() {
-    return Number(process.env.REFRESH_TOKEN_EXPIRES_IN || 7 * 24 * 60 * 60)
+    return parseExpiresIn(process.env.REFRESH_TOKEN_EXPIRES_IN, 7 * 24 * 60 * 60)
   }
 
   private signAccessToken({ user_id, status }: { user_id: string; status: AccountStatus }) {
@@ -31,7 +39,7 @@ class UsersService {
       },
       privateKey: process.env.JWT_SECRET_ACCESS_TOKEN as string,
       options: {
-        expiresIn: Number(process.env.ACCESS_TOKEN_EXPIRES_IN || 60 * 15)
+        expiresIn: parseExpiresIn(process.env.ACCESS_TOKEN_EXPIRES_IN, 60 * 15)
       }
     })
   }
@@ -127,8 +135,9 @@ class UsersService {
   async register(payload: RegisterReqBody) {
     const user_id = new ObjectId()
     const role = payload.role || UserRole.CUSTOMER
+    // PT mặc định sẽ có trạng thái pending, cần admin duyệt mới active để đăng nhập được
     const account_status = role === UserRole.PT ? AccountStatus.PENDING : AccountStatus.ACTIVE
-    const username = payload.username?.trim() || `user${user_id.toString().slice(-8)}`
+    const username = payload.username.trim()
 
     await databaseService.users.insertOne(
       new User({
@@ -153,7 +162,7 @@ class UsersService {
     if (role === UserRole.PT) {
       return {
         requires_approval: true,
-        message: 'Hồ sơ của bạn đã được ghi nhận. Quản trị viên sẽ xét duyệt trong vòng 24h.'
+        message: USERS_MESSAGES.PT_SUCCESSFULLY_REGISTERED
       }
     }
 
@@ -221,7 +230,7 @@ class UsersService {
         }
       )
       throw new ErrorWithStatus({
-        message: 'Bạn đã nhập sai quá nhiều lần. Tài khoản bị khóa trong 5 phút.',
+        message: USERS_MESSAGES.TOO_MANY_LOGIN_ATTEMPTS,
         status: HTTP_STATUS.BAD_REQUEST
       })
     }
@@ -241,7 +250,7 @@ class UsersService {
   }
 
   async login(payload: LoginReqBody) {
-    const identifier = payload.identifier.trim()
+    const identifier = (payload.identifier || payload.email || '').trim()
     const user = await databaseService.users.findOne({
       $or: [{ email: identifier.toLowerCase() }, { username: identifier }]
     })
@@ -256,14 +265,14 @@ class UsersService {
     // PT chưa duyệt không cho đăng nhập
     if (user.role === UserRole.PT && user.account_status === AccountStatus.PENDING) {
       throw new ErrorWithStatus({
-        message: 'Tài khoản PT đang chờ Admin xét duyệt.',
+        message: USERS_MESSAGES.PT_ACCOUNT_PENDING_APPROVAL,
         status: HTTP_STATUS.FORBIDDEN
       })
     }
 
     if (user.account_status === AccountStatus.LOCKED && user.locked_until && user.locked_until > new Date()) {
       throw new ErrorWithStatus({
-        message: 'Bạn đã nhập sai quá nhiều lần. Tài khoản đang bị khóa tạm thời.',
+        message: USERS_MESSAGES.ACCOUNT_IS_TEMPORARILY_LOCKED,
         status: HTTP_STATUS.BAD_REQUEST
       })
     }
@@ -313,7 +322,7 @@ class UsersService {
   async logout(refresh_token: string) {
     await databaseService.refreshTokens.deleteOne({ token: refresh_token })
     return {
-      message: 'Logout successful'
+      message: USERS_MESSAGES.LOGOUT_SUCCESS
     }
   }
 
@@ -360,7 +369,7 @@ class UsersService {
 
     if (!user || !user.forgot_password_token || user.forgot_password_token !== forgot_password_token) {
       throw new ErrorWithStatus({
-        message: 'Token reset password không hợp lệ hoặc đã được sử dụng.',
+        message: USERS_MESSAGES.RESET_PASSWORD_TOKEN_IS_INVALID_OR_USED,
         status: HTTP_STATUS.UNAUTHORIZED
       })
     }

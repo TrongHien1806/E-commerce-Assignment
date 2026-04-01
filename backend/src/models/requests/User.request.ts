@@ -12,8 +12,9 @@ export interface TokenPayload extends JwtPayload {
 
 export interface RegisterReqBody {
   email: string
-  username?: string
+  username: string
   password: string
+  confirm_password: string
   phone: string
   role?: UserRole
   healthProfile?: HealthProfile
@@ -21,7 +22,8 @@ export interface RegisterReqBody {
 }
 
 export interface LoginReqBody {
-  identifier: string // email hoặc username
+  identifier: string
+  email?: string
   password: string
   remember_me?: boolean
 }

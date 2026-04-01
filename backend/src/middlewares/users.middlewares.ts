@@ -31,24 +31,25 @@ export const registerValidator = validate(
         }
       },
       username: {
-        optional: true,
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.USERNAME_IS_REQUIRED
+        },
         isString: {
-          errorMessage: 'Username must be a string'
+          errorMessage: USERS_MESSAGES.USERNAME_MUST_BE_A_STRING
         },
         isLength: {
           options: {
             min: 3,
             max: 30
           },
-          errorMessage: 'Username length must be from 3 to 30'
+          errorMessage: USERS_MESSAGES.USERNAME_LENGTH_MUST_BE_FROM_3_TO_30
         },
         trim: true,
         custom: {
           options: async (value: string) => {
-            if (!value) return true
             const existed = await usersService.checkUsernameExist(value)
             if (existed) {
-              throw new Error('Username already exists')
+              throw new Error(USERS_MESSAGES.USERNAME_ALREADY_EXISTS)
             }
             return true
           }
@@ -66,7 +67,7 @@ export const registerValidator = validate(
             min: 8,
             max: 50
           },
-          errorMessage: 'Password length must be from 8 to 50'
+          errorMessage: USERS_MESSAGES.PASSWORD_LENGTH_MUST_BE_FROM_8_TO_50
         },
         isStrongPassword: {
           options: {
@@ -97,18 +98,18 @@ export const registerValidator = validate(
       },
       phone: {
         notEmpty: {
-          errorMessage: 'Phone is required'
-        },
-        matches: {
-          options: /^(0[3|5|7|8|9])[0-9]{8}$/,
-          errorMessage: 'Số điện thoại không hợp lệ (định dạng Việt Nam 10 số)'
+          errorMessage: USERS_MESSAGES.PHONE_IS_REQUIRED
         }
+        // matches: {
+        //   options: /^(0[3|5|7|8|9])[0-9]{8}$/,
+        //   errorMessage: 'Số điện thoại không hợp lệ (định dạng Việt Nam 10 số)'
+        // }
       },
       role: {
         optional: true,
         isIn: {
           options: [[UserRole.CUSTOMER, UserRole.PT]],
-          errorMessage: 'Role must be Customer or PT'
+          errorMessage: USERS_MESSAGES.ROLE_MUST_BE_CUSTOMER_OR_PT
         }
       }
     },
@@ -121,10 +122,10 @@ export const loginValidator = validate(
     {
       identifier: {
         notEmpty: {
-          errorMessage: 'Identifier is required (email or username)'
+          errorMessage: USERS_MESSAGES.IDENTIFIER_IS_REQUIRED
         },
         isString: {
-          errorMessage: 'Identifier must be a string'
+          errorMessage: USERS_MESSAGES.IDENTIFIER_MUST_BE_A_STRING
         },
         trim: true
       },
@@ -139,7 +140,7 @@ export const loginValidator = validate(
       remember_me: {
         optional: true,
         isBoolean: {
-          errorMessage: 'remember_me must be a boolean'
+          errorMessage: USERS_MESSAGES.REMEMBER_ME_MUST_BE_BOOLEAN
         }
       }
     },
@@ -169,18 +170,18 @@ export const resetPasswordValidator = validate(
     {
       user_id: {
         notEmpty: {
-          errorMessage: 'user_id is required'
+          errorMessage: USERS_MESSAGES.USER_ID_IS_REQUIRED
         },
         isString: {
-          errorMessage: 'user_id must be a string'
+          errorMessage: USERS_MESSAGES.USER_ID_MUST_BE_A_STRING
         }
       },
       forgot_password_token: {
         notEmpty: {
-          errorMessage: 'forgot_password_token is required'
+          errorMessage: USERS_MESSAGES.FORGOT_PASSWORD_TOKEN_IS_REQUIRED
         },
         isString: {
-          errorMessage: 'forgot_password_token must be a string'
+          errorMessage: USERS_MESSAGES.FORGOT_PASSWORD_TOKEN_MUST_BE_A_STRING
         }
       },
       password: {
@@ -195,7 +196,7 @@ export const resetPasswordValidator = validate(
             min: 8,
             max: 50
           },
-          errorMessage: 'Password length must be from 8 to 50'
+          errorMessage: USERS_MESSAGES.PASSWORD_LENGTH_MUST_BE_FROM_8_TO_50
         }
       },
       confirm_password: {
@@ -221,10 +222,10 @@ export const refreshTokenValidator = validate(
     {
       refresh_token: {
         notEmpty: {
-          errorMessage: 'refresh_token is required'
+          errorMessage: USERS_MESSAGES.REFRESH_TOKEN_IS_REQUIRED
         },
         isString: {
-          errorMessage: 'refresh_token must be a string'
+          errorMessage: USERS_MESSAGES.REFRESH_TOKEN_MUST_BE_A_STRING
         },
         custom: {
           options: async (value, { req }) => {
@@ -234,7 +235,7 @@ export const refreshTokenValidator = validate(
             })
             if (decoded_refresh_token.token_type !== TokenType.RefreshToken) {
               throw new ErrorWithStatus({
-                message: 'Invalid refresh token type',
+                message: USERS_MESSAGES.INVALID_REFRESH_TOKEN_TYPE,
                 status: HTTP_STATUS.UNAUTHORIZED
               })
             }
@@ -257,14 +258,14 @@ export const accessTokenValidator = validate(
             const authorization = (value || req?.headers?.authorization) as string
             if (!authorization) {
               throw new ErrorWithStatus({
-                message: 'Access token is required',
+                message: USERS_MESSAGES.ACCESS_TOKEN_IS_REQUIRED,
                 status: HTTP_STATUS.UNAUTHORIZED
               })
             }
             const access_token = authorization.split(' ')[1]
             if (!access_token) {
               throw new ErrorWithStatus({
-                message: 'Access token is invalid',
+                message: USERS_MESSAGES.ACCESS_TOKEN_IS_INVALID,
                 status: HTTP_STATUS.UNAUTHORIZED
               })
             }
@@ -274,7 +275,7 @@ export const accessTokenValidator = validate(
             })
             if (decoded_authorization.token_type !== TokenType.AccessToken) {
               throw new ErrorWithStatus({
-                message: 'Invalid access token type',
+                message: USERS_MESSAGES.INVALID_ACCESS_TOKEN_TYPE,
                 status: HTTP_STATUS.UNAUTHORIZED
               })
             }
@@ -286,5 +287,46 @@ export const accessTokenValidator = validate(
       }
     },
     ['headers']
+  )
+)
+
+export const checkEmailExistQueryValidator = validate(
+  checkSchema(
+    {
+      email: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.EMAIL_IS_REQUIRED
+        },
+        isEmail: {
+          errorMessage: USERS_MESSAGES.EMAIL_IS_INVALID
+        },
+        trim: true
+      }
+    },
+    ['query']
+  )
+)
+
+export const checkUsernameExistQueryValidator = validate(
+  checkSchema(
+    {
+      username: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.USERNAME_IS_REQUIRED
+        },
+        isString: {
+          errorMessage: USERS_MESSAGES.USERNAME_MUST_BE_A_STRING
+        },
+        isLength: {
+          options: {
+            min: 3,
+            max: 30
+          },
+          errorMessage: USERS_MESSAGES.USERNAME_LENGTH_MUST_BE_FROM_3_TO_30
+        },
+        trim: true
+      }
+    },
+    ['query']
   )
 )
