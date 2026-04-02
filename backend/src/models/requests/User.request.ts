@@ -54,3 +54,26 @@ export interface UpdateMeReqBody {
   healthProfile?: HealthProfile
   ptProfile?: PTProfile
 }
+
+export interface HealthProfileIntakeReqBody {
+  gender: 'Male' | 'Female'
+  age: number
+  heightCm: number
+  weightKg: number
+  activityLevel: 'Sedentary' | 'Light' | 'Moderate' | 'Active' | 'Very Active'
+  goal: 'LoseFat' | 'GainMuscle' | 'MaintainWeight'
+  allergies?: string[]
+}
+
+export interface MealRecommendationReqBody {
+  days: 1 | 7
+}
+
+export interface SwapMealRecommendationReqBody {
+  current_food_id: string
+  target_calories?: number
+}
+
+export interface RecommendPTReqQuery {
+  limit?: string
+}

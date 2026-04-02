@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { checkSchema } from 'express-validator'
+import { ObjectId } from 'mongodb'
 import { TokenType } from '~/constants/enums'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { USERS_MESSAGES } from '~/constants/messages'
@@ -336,6 +337,165 @@ export const checkUsernameExistQueryValidator = validate(
           errorMessage: USERS_MESSAGES.USERNAME_LENGTH_MUST_BE_FROM_3_TO_30
         },
         trim: true
+      }
+    },
+    ['query']
+  )
+)
+
+export const healthProfileIntakeValidator = validate(
+  checkSchema(
+    {
+      gender: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.GENDER_IS_REQUIRED
+        },
+        isIn: {
+          options: [['Male', 'Female']],
+          errorMessage: USERS_MESSAGES.GENDER_IS_INVALID
+        }
+      },
+      age: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.AGE_IS_REQUIRED
+        },
+        isInt: {
+          errorMessage: USERS_MESSAGES.AGE_MUST_BE_AN_INTEGER,
+          options: {
+            min: 10,
+            max: 100
+          }
+        },
+        toInt: true
+      },
+      heightCm: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.HEIGHT_IS_REQUIRED
+        },
+        isFloat: {
+          errorMessage: USERS_MESSAGES.HEIGHT_MUST_BE_A_NUMBER,
+          options: {
+            min: 100,
+            max: 250
+          }
+        },
+        toFloat: true
+      },
+      weightKg: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.WEIGHT_IS_REQUIRED
+        },
+        isFloat: {
+          errorMessage: USERS_MESSAGES.WEIGHT_MUST_BE_A_NUMBER,
+          options: {
+            min: 25,
+            max: 300
+          }
+        },
+        toFloat: true
+      },
+      activityLevel: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.ACTIVITY_LEVEL_IS_REQUIRED
+        },
+        isIn: {
+          options: [['Sedentary', 'Light', 'Moderate', 'Active', 'Very Active']],
+          errorMessage: USERS_MESSAGES.ACTIVITY_LEVEL_IS_INVALID
+        }
+      },
+      goal: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.HEALTH_GOAL_IS_REQUIRED
+        },
+        isIn: {
+          options: [['LoseFat', 'GainMuscle', 'MaintainWeight']],
+          errorMessage: USERS_MESSAGES.HEALTH_GOAL_IS_INVALID
+        }
+      },
+      allergies: {
+        optional: true,
+        isArray: {
+          errorMessage: USERS_MESSAGES.ALLERGIES_MUST_BE_AN_ARRAY
+        },
+        custom: {
+          options: (value: unknown[]) => {
+            if (!Array.isArray(value) || value.every((item) => typeof item === 'string')) {
+              return true
+            }
+            throw new Error(USERS_MESSAGES.ALLERGIES_MUST_BE_AN_ARRAY)
+          }
+        }
+      }
+    },
+    ['body']
+  )
+)
+
+export const mealRecommendationValidator = validate(
+  checkSchema(
+    {
+      days: {
+        optional: true,
+        custom: {
+          options: (value) => {
+            const parsed = Number(value)
+            if (parsed !== 1 && parsed !== 7) {
+              throw new Error(USERS_MESSAGES.RECOMMENDATION_DAYS_MUST_BE_1_OR_7)
+            }
+            return true
+          }
+        },
+        toInt: true
+      }
+    },
+    ['body']
+  )
+)
+
+export const swapMealRecommendationValidator = validate(
+  checkSchema(
+    {
+      current_food_id: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.FOOD_ID_IS_REQUIRED
+        },
+        custom: {
+          options: (value: string) => {
+            if (!ObjectId.isValid(value)) {
+              throw new Error(USERS_MESSAGES.FOOD_ID_IS_INVALID)
+            }
+            return true
+          }
+        }
+      },
+      target_calories: {
+        optional: true,
+        isFloat: {
+          errorMessage: USERS_MESSAGES.TARGET_CALORIES_MUST_BE_A_NUMBER,
+          options: {
+            gt: 0
+          }
+        },
+        toFloat: true
+      }
+    },
+    ['body']
+  )
+)
+
+export const recommendPTQueryValidator = validate(
+  checkSchema(
+    {
+      limit: {
+        optional: true,
+        isInt: {
+          options: {
+            min: 1,
+            max: 10
+          },
+          errorMessage: USERS_MESSAGES.RECOMMENDATION_LIMIT_IS_INVALID
+        },
+        toInt: true
       }
     },
     ['query']
