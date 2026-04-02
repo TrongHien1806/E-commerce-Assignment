@@ -3,11 +3,15 @@ import HTTP_STATUS from '~/constants/httpStatus'
 import { ParamsDictionary } from 'express-serve-static-core'
 import {
   ForgotPasswordReqBody,
+  HealthProfileIntakeReqBody,
   LoginReqBody,
+  MealRecommendationReqBody,
   LogoutReqBody,
+  RecommendPTReqQuery,
   RefreshTokenReqBody,
   RegisterReqBody,
   ResetPasswordReqBody,
+  SwapMealRecommendationReqBody,
   TokenPayload
 } from '~/models/requests/User.request'
 import { AccountStatus } from '~/models/schemas/User.schema'
@@ -100,5 +104,70 @@ export const checkUsernameExistController = async (req: Request, res: Response) 
   return res.status(HTTP_STATUS.OK).json({
     exists,
     message: exists ? USERS_MESSAGES.USERNAME_ALREADY_EXISTS : USERS_MESSAGES.USERNAME_AVAILABLE
+  })
+}
+
+export const healthProfileIntakeController = async (
+  req: Request<ParamsDictionary, Record<string, never>, HealthProfileIntakeReqBody>,
+  res: Response
+) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.upsertHealthProfile(decoded_authorization.user_id, req.body)
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.HEALTH_PROFILE_UPDATED_SUCCESS,
+    result
+  })
+}
+
+export const healthMetricsController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.getHealthMetrics(decoded_authorization.user_id)
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.HEALTH_METRICS_RETRIEVED_SUCCESS,
+    result
+  })
+}
+
+export const recommendMealsController = async (
+  req: Request<ParamsDictionary, Record<string, never>, MealRecommendationReqBody>,
+  res: Response
+) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const days = req.body.days || 1
+  const result = await usersService.recommendMeals(decoded_authorization.user_id, days)
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.MEAL_RECOMMENDATION_GENERATED_SUCCESS,
+    result
+  })
+}
+
+export const swapMealRecommendationController = async (
+  req: Request<ParamsDictionary, Record<string, never>, SwapMealRecommendationReqBody>,
+  res: Response
+) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.swapRecommendedFood(
+    decoded_authorization.user_id,
+    req.body.current_food_id,
+    req.body.target_calories
+  )
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.FOOD_SWAP_RECOMMENDATION_SUCCESS,
+    result
+  })
+}
+
+export const recommendPTController = async (
+  req: Request<ParamsDictionary, Record<string, never>, Record<string, never>, RecommendPTReqQuery>,
+  res: Response
+) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const limit = Number(req.query.limit || 3)
+  const result = await usersService.recommendPTs(decoded_authorization.user_id, limit)
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.PT_RECOMMENDATION_GENERATED_SUCCESS,
+    result
   })
 }
