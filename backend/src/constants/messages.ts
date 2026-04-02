@@ -38,6 +38,7 @@ export const USERS_MESSAGES = {
   REFRESH_TOKEN_IS_REQUIRED: 'refresh_token là bắt buộc',
   REFRESH_TOKEN_MUST_BE_A_STRING: 'refresh_token phải là chuỗi',
   INVALID_REFRESH_TOKEN_TYPE: 'Loại refresh token không hợp lệ',
+  REFRESH_TOKEN_NOT_FOUND: 'Refresh token không tồn tại trong hệ thống',
   ACCESS_TOKEN_IS_REQUIRED: 'Access token là bắt buộc',
   ACCESS_TOKEN_IS_INVALID: 'Access token không hợp lệ',
   INVALID_ACCESS_TOKEN_TYPE: 'Loại access token không hợp lệ',

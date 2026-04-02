@@ -1,3 +1,4 @@
+import { NextFunction, Request, Response } from 'express'
 import { checkSchema } from 'express-validator'
 import { TokenType } from '~/constants/enums'
 import HTTP_STATUS from '~/constants/httpStatus'
@@ -5,6 +6,7 @@ import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
 import { TokenPayload } from '~/models/requests/User.request'
 import { UserRole } from '~/models/schemas/User.schema'
+import databaseService from '~/services/database.services'
 import usersService from '~/services/user.services'
 import { verifyToken } from '~/utils/jwt'
 import { validate } from '~/utils/validation'
@@ -233,6 +235,15 @@ export const refreshTokenValidator = validate(
               token: value,
               secretOrPublicKey: process.env.JWT_SECRET_REFRESH_TOKEN as string
             })
+
+            const refreshTokenInDb = await databaseService.refreshTokens.findOne({ token: value })
+            if (!refreshTokenInDb) {
+              throw new ErrorWithStatus({
+                message: USERS_MESSAGES.REFRESH_TOKEN_NOT_FOUND,
+                status: HTTP_STATUS.UNAUTHORIZED
+              })
+            }
+
             if (decoded_refresh_token.token_type !== TokenType.RefreshToken) {
               throw new ErrorWithStatus({
                 message: USERS_MESSAGES.INVALID_REFRESH_TOKEN_TYPE,
@@ -330,3 +341,9 @@ export const checkUsernameExistQueryValidator = validate(
     ['query']
   )
 )
+
+export const debugValidator = (req: Request, res: Response, next: NextFunction) => {
+  console.log('Debug Validator - Request Body:', req.body)
+  console.log('Debug Validator - Request Headers:', req.headers)
+  next()
+}

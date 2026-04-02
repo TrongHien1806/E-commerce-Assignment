@@ -3,6 +3,7 @@ import {
   accessTokenValidator,
   checkEmailExistQueryValidator,
   checkUsernameExistQueryValidator,
+  debugValidator,
   forgotPasswordValidator,
   loginValidator,
   refreshTokenValidator,
@@ -27,15 +28,7 @@ const usersRouter = Router()
  * Description. Register a new user
  * Path: /register
  * Method: POST
- * Body: {
- *   email: string,
- *   username: string,
- *   password: string,
- *   confirm_password: string,
- *   phone: string,
- *   role?: 'Customer' | 'PT',
- *   healthProfile?: HealthProfile,
- *   ptProfile?: PTProfile
+ * Body: {email: string, username: string, password: string, confirm_password: string, phone: string, role?: 'Customer' | 'PT', healthProfile?: HealthProfile, ptProfile?: PTProfile
  * }
  */
 usersRouter.post('/register', registerValidator, wrapRequestHandler(registerController))
@@ -47,6 +40,15 @@ usersRouter.post('/register', registerValidator, wrapRequestHandler(registerCont
  * Body: {  identifier: string; email?: string; password: string; remember_me?: boolean }
  */
 usersRouter.post('/login', loginValidator, wrapRequestHandler(loginController))
+
+/**
+ * Description. Logout a user
+ * Path: /logout
+ * Method: POST
+ * Header: { Authorization: Bearer <access_token> }
+ * Body: { refresh_token: string }
+ */
+usersRouter.post('/logout', accessTokenValidator, refreshTokenValidator, wrapRequestHandler(logoutController))
 
 /**
  * Description. Check if email is already used
@@ -63,15 +65,6 @@ usersRouter.get('/check-email', checkEmailExistQueryValidator, wrapRequestHandle
  * Query: { username: string }
  */
 usersRouter.get('/check-username', checkUsernameExistQueryValidator, wrapRequestHandler(checkUsernameExistController))
-
-/**
- * Description. Logout a user
- * Path: /logout
- * Method: POST
- * Header: { Authorization: Bearer <access_token> }
- * Body: { refresh_token: string }
- */
-usersRouter.post('/logout', accessTokenValidator, refreshTokenValidator, wrapRequestHandler(logoutController))
 
 /**
  * Description. Refresh token

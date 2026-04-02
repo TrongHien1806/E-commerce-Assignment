@@ -28,6 +28,25 @@ export interface LoginReqBody {
   remember_me?: boolean
 }
 
+export interface LogoutReqBody {
+  refresh_token: string
+}
+
+export interface RefreshTokenReqBody {
+  refresh_token: string
+}
+
+export interface ForgotPasswordReqBody {
+  email: string
+}
+
+export interface ResetPasswordReqBody {
+  user_id: string
+  forgot_password_token: string
+  password: string
+  confirm_password: string
+}
+
 export interface UpdateMeReqBody {
   username?: string
   phone?: string
