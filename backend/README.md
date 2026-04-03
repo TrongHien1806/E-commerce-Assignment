@@ -289,3 +289,7 @@ Tài liệu này mô tả phạm vi công việc cho các module backend đã ch
 6. Chat/Workout + Notification
 
 Thứ tự này giúp frontend có thể tích hợp dần mà không bị chặn luồng chính.
+
+
+Run srcipt
+npx tsx scripts/seed-pts.ts

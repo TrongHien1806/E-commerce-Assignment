@@ -431,6 +431,88 @@ export const healthProfileIntakeValidator = validate(
   )
 )
 
+export const updateMeValidator = validate(
+  checkSchema(
+    {
+      username: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.USERNAME_MUST_BE_A_STRING
+        },
+        isLength: {
+          options: {
+            min: 3,
+            max: 30
+          },
+          errorMessage: USERS_MESSAGES.USERNAME_LENGTH_MUST_BE_FROM_3_TO_30
+        },
+        trim: true
+      },
+      phone: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.PHONE_IS_INVALID
+        },
+        trim: true
+      },
+      date_of_birth: {
+        optional: true,
+        isISO8601: {
+          errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+        }
+      }
+    },
+    ['body']
+  )
+)
+
+export const updatePTProfileValidator = validate(
+  checkSchema(
+    {
+      experienceYears: {
+        optional: true,
+        isInt: {
+          options: {
+            min: 0,
+            max: 80
+          },
+          errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+        },
+        toInt: true
+      },
+      specialties: {
+        optional: true,
+        isArray: {
+          errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+        },
+        custom: {
+          options: (value: unknown[]) => {
+            if (!Array.isArray(value) || value.every((item) => typeof item === 'string')) {
+              return true
+            }
+            throw new Error(USERS_MESSAGES.VALIDATION_ERROR)
+          }
+        }
+      },
+      portfolioImages: {
+        optional: true,
+        isArray: {
+          errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+        },
+        custom: {
+          options: (value: unknown[]) => {
+            if (!Array.isArray(value) || value.every((item) => typeof item === 'string')) {
+              return true
+            }
+            throw new Error(USERS_MESSAGES.VALIDATION_ERROR)
+          }
+        }
+      }
+    },
+    ['body']
+  )
+)
+
 export const mealRecommendationValidator = validate(
   checkSchema(
     {
