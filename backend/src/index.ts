@@ -4,12 +4,13 @@ import usersRouter from '~/routes/users.routes'
 import databaseService from '~/services/database.services'
 import cors from 'cors'
 import { defaultErrorHandler } from '~/middlewares/errors.middlewares'
+import ptRouter from './routes/pt.routes'
 
 config()
 // connect xong thì tạo index
 databaseService.connect().then(async () => {
-  databaseService.indexUsers()
-  databaseService.indexRefreshTokens()
+  // databaseService.indexUsers()
+  // databaseService.indexRefreshTokens()
   // await autogenerateUsers()
   // await autogenerateTweets()
 })
@@ -25,6 +26,7 @@ const port = process.env.PORT || 4000
 // Tạo folder upload
 app.use(express.json())
 app.use('/users', usersRouter)
+app.use('/pt', ptRouter)
 
 app.use(defaultErrorHandler)
 app.listen(port, () => {
