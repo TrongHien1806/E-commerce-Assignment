@@ -5,6 +5,7 @@ import databaseService from '~/services/database.services'
 import cors from 'cors'
 import { defaultErrorHandler } from '~/middlewares/errors.middlewares'
 import ptRouter from './routes/pt.routes'
+import foodsRouter from './routes/foods.routes'
 
 config()
 // connect xong thì tạo index
@@ -27,6 +28,7 @@ const port = process.env.PORT || 4000
 app.use(express.json())
 app.use('/users', usersRouter)
 app.use('/pt', ptRouter)
+app.use('/foods', foodsRouter)
 
 app.use(defaultErrorHandler)
 app.listen(port, () => {
