@@ -4,7 +4,7 @@ import { TokenType } from '~/constants/enums'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
-import { LoginReqBody, RegisterReqBody, UpdateMeReqBody } from '~/models/requests/User.request'
+import { LoginReqBody, RegisterReqBody, UpdateMeReqBody, UpdatePTProfileReqBody } from '~/models/requests/User.request'
 import Food from '~/models/schemas/Food.schema'
 import RefreshToken from '~/models/schemas/RefreshToken.schema'
 import User, {
@@ -582,7 +582,19 @@ class UsersService {
   }
 
   async updateMe(user_id: string, payload: UpdateMeReqBody) {
-    const _payload = payload.date_of_birth ? { ...payload, date_of_birth: new Date(payload.date_of_birth) } : payload
+    const safePayload: { username?: string; phone?: string; date_of_birth?: Date } = {}
+
+    if (typeof payload.username === 'string') {
+      safePayload.username = payload.username.trim()
+    }
+
+    if (typeof payload.phone === 'string') {
+      safePayload.phone = payload.phone.trim()
+    }
+
+    if (typeof payload.date_of_birth === 'string') {
+      safePayload.date_of_birth = new Date(payload.date_of_birth)
+    }
 
     const updatedUser = await databaseService.users.findOneAndUpdate(
       {
@@ -590,7 +602,58 @@ class UsersService {
       },
       {
         $set: {
-          ...(_payload as UpdateMeReqBody & { date_of_birth?: Date })
+          ...safePayload
+        },
+        $currentDate: {
+          updated_at: true
+        }
+      },
+      {
+        returnDocument: 'after',
+        projection: {
+          password: 0,
+          forgot_password_token: 0
+        }
+      }
+    )
+
+    return updatedUser
+  }
+
+  async updatePTProfile(user_id: string, payload: UpdatePTProfileReqBody) {
+    const user = await databaseService.users.findOne(
+      { _id: new ObjectId(user_id) },
+      { projection: { role: 1, ptProfile: 1 } }
+    )
+
+    if (!user) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.USER_NOT_FOUND,
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    if (user.role !== UserRole.PT) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.ONLY_PT_CAN_UPDATE_PT_PROFILE,
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
+    const nextPTProfile: PTProfile = {
+      experienceYears: payload.experienceYears ?? user.ptProfile?.experienceYears ?? 0,
+      specialties: payload.specialties?.map((item) => item.trim()).filter(Boolean) ?? user.ptProfile?.specialties ?? [],
+      rating: user.ptProfile?.rating ?? 0,
+      portfolioImages:
+        payload.portfolioImages?.map((item) => item.trim()).filter(Boolean) ?? user.ptProfile?.portfolioImages ?? [],
+      approvedByAdmin: user.ptProfile?.approvedByAdmin ?? false
+    }
+
+    const updatedUser = await databaseService.users.findOneAndUpdate(
+      { _id: new ObjectId(user_id) },
+      {
+        $set: {
+          ptProfile: nextPTProfile
         },
         $currentDate: {
           updated_at: true

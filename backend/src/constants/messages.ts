@@ -51,6 +51,10 @@ export const USERS_MESSAGES = {
   RESET_PASSWORD_SUCCESS: 'Đặt lại mật khẩu thành công',
 
   USER_NOT_FOUND: 'Không tìm thấy người dùng',
+  PROFILE_RETRIEVED_SUCCESS: 'Lấy thông tin hồ sơ thành công',
+  PROFILE_UPDATED_SUCCESS: 'Cập nhật hồ sơ thành công',
+  PT_PROFILE_UPDATED_SUCCESS: 'Cập nhật hồ sơ PT thành công',
+  ONLY_PT_CAN_UPDATE_PT_PROFILE: 'Chỉ tài khoản PT mới có thể cập nhật hồ sơ PT',
 
   HEALTH_PROFILE_UPDATED_SUCCESS: 'Cập nhật hồ sơ sức khỏe thành công',
   HEALTH_METRICS_RETRIEVED_SUCCESS: 'Lấy chỉ số sức khỏe thành công',

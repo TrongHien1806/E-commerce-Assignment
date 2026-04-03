@@ -55,6 +55,12 @@ export interface UpdateMeReqBody {
   ptProfile?: PTProfile
 }
 
+export interface UpdatePTProfileReqBody {
+  experienceYears?: number
+  specialties?: string[]
+  portfolioImages?: string[]
+}
+
 export interface HealthProfileIntakeReqBody {
   gender: 'Male' | 'Female'
   age: number
