@@ -16,7 +16,9 @@ const dbname = process.env.DB_NAME
 if (!username || !password) {
   throw new Error('Missing DB_USERNAME or DB_PASSWORD in the .env file')
 }
-const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/?appName=StudyMongoDBBasic`
+// const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/?appName=StudyMongoDBBasic`
+const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/
+`
 
 class DatabaseService {
   private client: MongoClient
