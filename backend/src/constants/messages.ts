@@ -113,6 +113,8 @@ export const USERS_MESSAGES = {
   CART_QUANTITY_IS_REQUIRED: 'Số lượng là bắt buộc',
   CART_QUANTITY_MUST_BE_POSITIVE: 'Số lượng phải lớn hơn 0',
   CART_QUANTITY_MUST_BE_ZERO_OR_POSITIVE: 'Số lượng phải lớn hơn hoặc bằng 0',
+  CART_PT_SERVICE_QUANTITY_MUST_BE_ONE: 'Dịch vụ PT chỉ có thể chọn số lượng là 1',
+  CART_FOOD_QUANTITY_EXCEEDS_STOCK: 'Số lượng món ăn vượt quá tồn kho hiện tại',
 
   // Order + Checkout + Payment
   ORDER_QUOTED_SUCCESS: 'Tính toán đơn hàng thành công',

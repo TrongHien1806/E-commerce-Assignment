@@ -17,21 +17,68 @@ import { wrapRequestHandler } from '~/utils/handlers'
 
 const cartRouter = Router()
 
+/**
+ * Description. Get current user's cart summary
+ * Path: /
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ */
 cartRouter.get('/', accessTokenValidator, wrapRequestHandler(getCartController))
+
+/**
+ * Description. Add an item into current user's cart
+ * Path: /items
+ * Method: POST
+ * Header: { Authorization: Bearer <access_token> }
+ * Body: { itemType: 'Food' | 'PTService', itemId: string, quantity: number }
+ */
 cartRouter.post('/items', accessTokenValidator, addCartItemValidator, wrapRequestHandler(addCartItemController))
+
+/**
+ * Description. Update item quantity in current user's cart
+ * Path: /items/:itemId
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ * Params: { itemId: string }
+ * Query: { itemType: 'Food' | 'PTService' }
+ * Body: { quantity: number }
+ */
 cartRouter.patch(
   '/items/:itemId',
   accessTokenValidator,
   updateCartItemQuantityValidator,
   wrapRequestHandler(updateCartItemQuantityController)
 )
+
+/**
+ * Description. Remove one item from current user's cart
+ * Path: /items/:itemId
+ * Method: DELETE
+ * Header: { Authorization: Bearer <access_token> }
+ * Params: { itemId: string }
+ * Query: { itemType: 'Food' | 'PTService' }
+ */
 cartRouter.delete(
   '/items/:itemId',
   accessTokenValidator,
   removeCartItemValidator,
   wrapRequestHandler(removeCartItemController)
 )
+
+/**
+ * Description. Clear all items in current user's cart
+ * Path: /
+ * Method: DELETE
+ * Header: { Authorization: Bearer <access_token> }
+ */
 cartRouter.delete('/', accessTokenValidator, wrapRequestHandler(clearCartController))
+
+/**
+ * Description. Refresh cart summary by latest food/service information
+ * Path: /refresh
+ * Method: POST
+ * Header: { Authorization: Bearer <access_token> }
+ */
 cartRouter.post('/refresh', accessTokenValidator, wrapRequestHandler(refreshCartController))
 
 export default cartRouter

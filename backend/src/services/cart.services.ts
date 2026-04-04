@@ -161,7 +161,10 @@ class CartService {
           status: HTTP_STATUS.BAD_REQUEST
         })
       }
-      return Number(food.price)
+      return {
+        price: Number(food.price),
+        stock: Number(food.stock)
+      }
     }
 
     const ptService = await databaseService.ptServices.findOne({ _id: itemId })
@@ -171,7 +174,26 @@ class CartService {
         status: HTTP_STATUS.BAD_REQUEST
       })
     }
-    return Number(ptService.price)
+
+    return {
+      price: Number(ptService.price)
+    }
+  }
+
+  private validateQuantityRules(itemType: CartItemType, quantity: number, foodStock?: number) {
+    if (itemType === 'PTService' && quantity !== 1) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.CART_PT_SERVICE_QUANTITY_MUST_BE_ONE,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    if (itemType === 'Food' && typeof foodStock === 'number' && quantity > foodStock) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.CART_FOOD_QUANTITY_EXCEEDS_STOCK,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
   }
 
   async addItem(userId: string, payload: { itemType: CartItemType; itemId: string; quantity: number }) {
@@ -186,21 +208,24 @@ class CartService {
       })
     }
 
-    const latestPrice = await this.ensurePurchasableItem(payload.itemType, itemObjectId)
+    const purchasable = await this.ensurePurchasableItem(payload.itemType, itemObjectId)
 
     const existing = cart.items.find(
       (item) => item.itemType === payload.itemType && String(item.itemId) === String(itemObjectId)
     )
 
+    const nextQuantity = existing ? existing.quantity + quantity : quantity
+    this.validateQuantityRules(payload.itemType, nextQuantity, purchasable.stock)
+
     if (existing) {
-      existing.quantity += quantity
-      existing.priceAtOrder = latestPrice
+      existing.quantity = nextQuantity
+      existing.priceAtOrder = purchasable.price
     } else {
       cart.items.push({
         itemType: payload.itemType,
         itemId: itemObjectId,
-        quantity,
-        priceAtOrder: latestPrice
+        quantity: nextQuantity,
+        priceAtOrder: purchasable.price
       })
     }
 
@@ -236,9 +261,10 @@ class CartService {
         (item) => !(item.itemType === payload.itemType && String(item.itemId) === String(itemObjectId))
       )
     } else {
-      const latestPrice = await this.ensurePurchasableItem(payload.itemType, itemObjectId)
+      const purchasable = await this.ensurePurchasableItem(payload.itemType, itemObjectId)
+      this.validateQuantityRules(payload.itemType, payload.quantity, purchasable.stock)
       target.quantity = payload.quantity
-      target.priceAtOrder = latestPrice
+      target.priceAtOrder = purchasable.price
     }
 
     await databaseService.carts.updateOne(
