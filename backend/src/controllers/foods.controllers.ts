@@ -11,13 +11,18 @@ type FoodParams = {
 type FoodListQuery = {
   page?: string
   limit?: string
+  search?: string
+  tags?: string
+  minPrice?: string
+  maxPrice?: string
+  minCalories?: string
+  maxCalories?: string
+  sortBy?: string
+  order?: 'asc' | 'desc'
 }
 
 export const getFoodsController = async (req: Request<ParamsDictionary, any, any, FoodListQuery>, res: Response) => {
-  const page = Math.max(1, Number(req.query.page) || 1)
-  const limit = Math.max(1, Number(req.query.limit) || 10)
-
-  const result = await foodService.getFoods(page, limit)
+  const result = await foodService.getFoods(req.query)
 
   return res.status(HTTP_STATUS.OK).json({
     message: 'Lấy danh sách món ăn thành công',

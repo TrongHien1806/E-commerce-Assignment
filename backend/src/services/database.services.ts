@@ -9,28 +9,30 @@ import Cart from '~/models/schemas/Cart.schema'
 import Review from '~/models/schemas/Review.schema'
 import ChatRoom from '~/models/schemas/ChatRoom.schema'
 import Analytics from '~/models/schemas/Analytic.schema'
+
 config()
+
 const username = process.env.DB_USERNAME
 const password = process.env.DB_PASSWORD
 const dbname = process.env.DB_NAME
+
 if (!username || !password) {
   throw new Error('Missing DB_USERNAME or DB_PASSWORD in the .env file')
 }
 // const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/?appName=StudyMongoDBBasic`
-const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/
-`
+const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/`
 
 class DatabaseService {
   private client: MongoClient
   private db: Db
+
   constructor() {
     this.client = new MongoClient(uri)
-    this.db = this.client.db(process.env.DB_NAME)
+    this.db = this.client.db(dbname)
   }
 
   async connect() {
     try {
-      // Send a ping to confirm a successful connection
       await this.db.command({ ping: 1 })
       console.log('Pinged your deployment. You successfully connected to MongoDB!')
     } catch (error) {
@@ -43,17 +45,18 @@ class DatabaseService {
     const exists = await this.users.indexExists(['email_1_password_1', 'email_1', 'username_1'])
 
     if (!exists) {
-      this.users.createIndex({ email: 1, password: 1 })
-      this.users.createIndex({ email: 1 }, { unique: true }) // báo lỗi nếu có 2 user cùng email
-      this.users.createIndex({ username: 1 }, { unique: true })
+      await this.users.createIndex({ email: 1, password: 1 })
+      await this.users.createIndex({ email: 1 }, { unique: true })
+      await this.users.createIndex({ username: 1 }, { unique: true })
     }
   }
+
   async indexRefreshTokens() {
     const exists = await this.refreshTokens.indexExists(['exp_1', 'token_1'])
 
     if (!exists) {
-      this.refreshTokens.createIndex({ token: 1 })
-      this.refreshTokens.createIndex(
+      await this.refreshTokens.createIndex({ token: 1 })
+      await this.refreshTokens.createIndex(
         { exp: 1 },
         {
           expireAfterSeconds: 0
@@ -114,6 +117,5 @@ class DatabaseService {
   }
 }
 
-// Tạo object từ class DatabaseService
 const databaseService = new DatabaseService()
 export default databaseService
