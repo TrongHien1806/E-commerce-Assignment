@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --check .",
-    "prettier:fix": "prettier --write ."
+    "prettier:fix": "prettier --write .",
+    "seed:cart": "npx tsx scripts/seed-cart.ts"
   },
   "keywords": [],
   "author": "",

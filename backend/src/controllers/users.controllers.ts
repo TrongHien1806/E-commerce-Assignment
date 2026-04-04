@@ -12,6 +12,8 @@ import {
   RegisterReqBody,
   ResetPasswordReqBody,
   SwapMealRecommendationReqBody,
+  UpdateMeReqBody,
+  UpdatePTProfileReqBody,
   TokenPayload
 } from '~/models/requests/User.request'
 import { AccountStatus } from '~/models/schemas/User.schema'
@@ -124,6 +126,39 @@ export const healthMetricsController = async (req: Request, res: Response) => {
   const result = await usersService.getHealthMetrics(decoded_authorization.user_id)
   return res.status(HTTP_STATUS.OK).json({
     message: USERS_MESSAGES.HEALTH_METRICS_RETRIEVED_SUCCESS,
+    result
+  })
+}
+
+export const getMeController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.getMe(decoded_authorization.user_id)
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.PROFILE_RETRIEVED_SUCCESS,
+    result
+  })
+}
+
+export const updateMeController = async (
+  req: Request<ParamsDictionary, Record<string, never>, UpdateMeReqBody>,
+  res: Response
+) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.updateMe(decoded_authorization.user_id, req.body)
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.PROFILE_UPDATED_SUCCESS,
+    result
+  })
+}
+
+export const updatePTProfileController = async (
+  req: Request<ParamsDictionary, Record<string, never>, UpdatePTProfileReqBody>,
+  res: Response
+) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.updatePTProfile(decoded_authorization.user_id, req.body)
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.PT_PROFILE_UPDATED_SUCCESS,
     result
   })
 }

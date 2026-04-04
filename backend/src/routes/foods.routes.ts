@@ -6,9 +6,29 @@ import { wrapRequestHandler } from '~/utils/handlers'
 
 const foodsRouter = Router()
 
+/**
+ * Description. Get foods list with optional filtering, sorting and pagination
+ * Path: /
+ * Method: GET
+ * Query: { page?: number, limit?: number, search?: string, category?: string, minCalories?: number, maxCalories?: number, sortBy?: string, order?: 'asc' | 'desc' }
+ */
 foodsRouter.get('/', wrapRequestHandler(getFoodsController))
+
+/**
+ * Description. Get detail of one food by id
+ * Path: /:food_id
+ * Method: GET
+ * Params: { food_id: string }
+ */
 foodsRouter.get('/:food_id', getFoodDetailValidator, wrapRequestHandler(getFoodDetailController))
 
+/**
+ * Description. Create a new food item
+ * Path: /
+ * Method: POST
+ * Header: { Authorization: Bearer <access_token> }
+ * Body: { name: string, description: string, category: string, price: number, calories: number, protein: number, carbs: number, fat: number, imageUrl?: string, stock?: number, isActive?: boolean }
+ */
 foodsRouter.post('/', accessTokenValidator, createFoodValidator, wrapRequestHandler(createFoodController))
 
 export default foodsRouter

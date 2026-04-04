@@ -1,109 +1,141 @@
 import { checkSchema } from 'express-validator'
+import { USERS_MESSAGES } from '~/constants/messages'
 import { validate } from '~/utils/validation'
 
-export const createOrderValidator = validate(
-  checkSchema({
-    items: {
-      in: ['body'],
-      custom: {
-        options: (value) => {
-          if (!Array.isArray(value)) {
-            throw new Error('Danh sách sản phẩm phải là một mảng')
-          }
-          if (value.length === 0) {
-            throw new Error('Giỏ hàng trống')
-          }
-          return true
+const PAYMENT_METHODS = ['COD', 'VNPay', 'MoMo']
+const DELIVERY_MODES = ['WEEKLY_ONCE', 'DAILY']
+const PAYMENT_STATUSES = ['Pending', 'Paid', 'Failed']
+const ORDER_NEXT_STATUSES = ['Cooking', 'Delivering', 'Completed']
+
+export const quoteOrderValidator = validate(
+  checkSchema(
+    {
+      deliveryAddress: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.DELIVERY_ADDRESS_IS_REQUIRED
+        },
+        isString: {
+          errorMessage: USERS_MESSAGES.DELIVERY_ADDRESS_MUST_BE_A_STRING
+        },
+        trim: true
+      },
+      deliveryMode: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.DELIVERY_MODE_IS_REQUIRED
+        },
+        isIn: {
+          options: [DELIVERY_MODES],
+          errorMessage: USERS_MESSAGES.DELIVERY_MODE_IS_INVALID
+        }
+      },
+      distanceKm: {
+        optional: true,
+        isFloat: {
+          options: { min: 0 },
+          errorMessage: USERS_MESSAGES.DISTANCE_KM_MUST_BE_A_NON_NEGATIVE_NUMBER
+        }
+      },
+      deliveryDistancesKm: {
+        optional: true,
+        isArray: {
+          errorMessage: USERS_MESSAGES.DELIVERY_DISTANCES_MUST_BE_ARRAY
+        }
+      },
+      paymentMethod: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.PAYMENT_METHOD_IS_REQUIRED
+        },
+        isIn: {
+          options: [PAYMENT_METHODS],
+          errorMessage: USERS_MESSAGES.PAYMENT_METHOD_IS_INVALID
+        }
+      },
+      note: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.NOTE_MUST_BE_A_STRING
+        }
+      },
+      deliveryDates: {
+        optional: true,
+        isArray: {
+          errorMessage: USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY
         }
       }
     },
+    ['body']
+  )
+)
 
-    'items.*.itemType': {
-      in: ['body'],
-      notEmpty: {
-        errorMessage: 'Loại sản phẩm là bắt buộc'
-      },
-      isIn: {
-        options: [['Food', 'PTService']],
-        errorMessage: 'Loại sản phẩm không hợp lệ'
-      }
-    },
+export const createOrderValidator = quoteOrderValidator
 
-    'items.*.itemId': {
-      in: ['body'],
-      notEmpty: {
-        errorMessage: 'ID sản phẩm là bắt buộc'
-      },
-      isMongoId: {
-        errorMessage: 'ID sản phẩm không hợp lệ'
-      }
-    },
-
-    'items.*.quantity': {
-      in: ['body'],
-      notEmpty: {
-        errorMessage: 'Số lượng là bắt buộc'
-      },
-      isInt: {
-        options: { min: 1 },
-        errorMessage: 'Số lượng phải lớn hơn 0'
-      },
-      toInt: true
-    },
-
-    // Nếu bạn vẫn muốn nhận price từ client thì giữ lại.
-    // Nhưng tốt hơn là bỏ hẳn field này và lấy giá thật từ DB trong service.
-    'items.*.price': {
-      in: ['body'],
-      optional: true,
-      isFloat: {
-        options: { min: 0 },
-        errorMessage: 'Giá không hợp lệ'
-      },
-      toFloat: true
-    },
-
-    deliveryAddress: {
-      in: ['body'],
-      notEmpty: {
-        errorMessage: 'Địa chỉ giao hàng là bắt buộc'
-      },
-      isString: {
-        errorMessage: 'Địa chỉ giao hàng phải là chuỗi'
-      },
-      trim: true
-    },
-
-    note: {
-      in: ['body'],
-      optional: true,
-      isString: {
-        errorMessage: 'Ghi chú phải là chuỗi'
-      },
-      trim: true
-    },
-
-    payment: {
-      in: ['body'],
-      custom: {
-        options: (value) => {
-          if (!value || typeof value !== 'object' || Array.isArray(value)) {
-            throw new Error('Thông tin thanh toán không hợp lệ')
-          }
-          return true
+export const orderIdParamValidator = validate(
+  checkSchema(
+    {
+      orderId: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.ORDER_ID_IS_REQUIRED
+        },
+        isMongoId: {
+          errorMessage: USERS_MESSAGES.ORDER_ID_IS_INVALID
         }
       }
     },
+    ['params']
+  )
+)
 
-    'payment.method': {
-      in: ['body'],
-      notEmpty: {
-        errorMessage: 'Phương thức thanh toán là bắt buộc'
-      },
-      isIn: {
-        options: [['COD', 'VNPay', 'MoMo']],
-        errorMessage: 'Phương thức thanh toán không hợp lệ'
+export const updateOrderStatusValidator = validate(
+  checkSchema(
+    {
+      status: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.ORDER_STATUS_IS_REQUIRED
+        },
+        isIn: {
+          options: [ORDER_NEXT_STATUSES],
+          errorMessage: USERS_MESSAGES.ORDER_STATUS_IS_INVALID
+        }
       }
-    }
-  })
+    },
+    ['body']
+  )
+)
+
+export const retryPaymentValidator = validate(
+  checkSchema(
+    {
+      paymentMethod: {
+        optional: true,
+        isIn: {
+          options: [PAYMENT_METHODS],
+          errorMessage: USERS_MESSAGES.PAYMENT_METHOD_IS_INVALID
+        }
+      }
+    },
+    ['body']
+  )
+)
+
+export const updatePaymentStatusValidator = validate(
+  checkSchema(
+    {
+      status: {
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.PAYMENT_STATUS_IS_REQUIRED
+        },
+        isIn: {
+          options: [PAYMENT_STATUSES],
+          errorMessage: USERS_MESSAGES.PAYMENT_STATUS_IS_INVALID
+        }
+      },
+      transactionId: {
+        optional: true,
+        isString: {
+          errorMessage: USERS_MESSAGES.TRANSACTION_ID_MUST_BE_A_STRING
+        }
+      }
+    },
+    ['body']
+  )
 )

@@ -11,12 +11,15 @@ import {
   refreshTokenValidator,
   registerValidator,
   resetPasswordValidator,
-  swapMealRecommendationValidator
+  swapMealRecommendationValidator,
+  updateMeValidator,
+  updatePTProfileValidator
 } from '~/middlewares/users.middlewares'
 import {
   checkEmailExistController,
   checkUsernameExistController,
   forgotPasswordController,
+  getMeController,
   healthMetricsController,
   healthProfileIntakeController,
   loginController,
@@ -26,7 +29,9 @@ import {
   refreshTokenController,
   registerController,
   resetPasswordController,
-  swapMealRecommendationController
+  swapMealRecommendationController,
+  updateMeController,
+  updatePTProfileController
 } from '~/controllers/users.controllers'
 import { wrapRequestHandler } from '~/utils/handlers'
 
@@ -97,6 +102,37 @@ usersRouter.post('/forgot-password', forgotPasswordValidator, wrapRequestHandler
  * Body: { user_id: string, forgot_password_token: string, password: string, confirm_password: string }
  */
 usersRouter.post('/reset-password', resetPasswordValidator, wrapRequestHandler(resetPasswordController))
+
+/**
+ * Description. Get current user profile
+ * Path: /me
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ */
+usersRouter.get('/me', accessTokenValidator, wrapRequestHandler(getMeController))
+
+/**
+ * Description. Update current user profile
+ * Path: /me
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ * Body: { username?: string, phone?: string, date_of_birth?: string }
+ */
+usersRouter.patch('/me', accessTokenValidator, updateMeValidator, wrapRequestHandler(updateMeController))
+
+/**
+ * Description. Update PT profile for current PT account
+ * Path: /me/pt-profile
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ * Body: { experienceYears?: number, specialties?: string[], portfolioImages?: string[] }
+ */
+usersRouter.patch(
+  '/me/pt-profile',
+  accessTokenValidator,
+  updatePTProfileValidator,
+  wrapRequestHandler(updatePTProfileController)
+)
 
 /**
  * Description. Intake or update health profile and auto-calculate metrics

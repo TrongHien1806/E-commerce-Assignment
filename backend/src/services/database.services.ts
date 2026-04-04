@@ -19,8 +19,8 @@ const dbname = process.env.DB_NAME
 if (!username || !password) {
   throw new Error('Missing DB_USERNAME or DB_PASSWORD in the .env file')
 }
-
-const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/?appName=StudyMongoDBBasic`
+// const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/?appName=StudyMongoDBBasic`
+const uri = `mongodb+srv://${username}:${password}@studymongodbbasic.nvb8bql.mongodb.net/`
 
 class DatabaseService {
   private client: MongoClient
@@ -62,6 +62,21 @@ class DatabaseService {
           expireAfterSeconds: 0
         }
       )
+    }
+  }
+
+  async indexCarts() {
+    const exists = await this.carts.indexExists(['userId_1'])
+    if (!exists) {
+      this.carts.createIndex({ userId: 1 }, { unique: true })
+    }
+  }
+
+  async indexOrders() {
+    const exists = await this.orders.indexExists(['userId_1_createdAt_-1', 'status_1_createdAt_-1'])
+    if (!exists) {
+      this.orders.createIndex({ userId: 1, createdAt: -1 })
+      this.orders.createIndex({ status: 1, createdAt: -1 })
     }
   }
 
