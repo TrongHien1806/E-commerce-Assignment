@@ -62,6 +62,21 @@ class DatabaseService {
     }
   }
 
+  async indexCarts() {
+    const exists = await this.carts.indexExists(['userId_1'])
+    if (!exists) {
+      this.carts.createIndex({ userId: 1 }, { unique: true })
+    }
+  }
+
+  async indexOrders() {
+    const exists = await this.orders.indexExists(['userId_1_createdAt_-1', 'status_1_createdAt_-1'])
+    if (!exists) {
+      this.orders.createIndex({ userId: 1, createdAt: -1 })
+      this.orders.createIndex({ status: 1, createdAt: -1 })
+    }
+  }
+
   get users(): Collection<User> {
     return this.db.collection(process.env.DB_USERS_COLLECTION as string)
   }
