@@ -9,15 +9,15 @@ import { defaultErrorHandler } from '~/middlewares/errors.middlewares'
 import ptRouter from './routes/pt.routes'
 import foodsRouter from './routes/foods.routes'
 import trackingRouter from '~/routes/tracking.routes'
-import ordersRouter from './routes/orders.routes'
+import reviewsRouter from '~/routes/reviews.routes'
 
 config()
 // connect xong thì tạo index
 databaseService.connect().then(async () => {
-  databaseService.indexUsers()
-  databaseService.indexRefreshTokens()
-  databaseService.indexCarts()
-  databaseService.indexOrders()
+  // databaseService.indexUsers()
+  // databaseService.indexRefreshTokens()
+  // databaseService.indexCarts()
+  // databaseService.indexOrders()
   // await autogenerateUsers()
   // await autogenerateTweets()
 })
@@ -38,6 +38,7 @@ app.use('/orders', ordersRouter)
 app.use('/pt', ptRouter)
 app.use('/foods', foodsRouter)
 app.use('/tracking', trackingRouter)
+app.use('/reviews', reviewsRouter)
 app.use('/orders', ordersRouter)
 
 app.use(defaultErrorHandler)

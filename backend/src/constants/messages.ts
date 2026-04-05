@@ -152,5 +152,18 @@ export const USERS_MESSAGES = {
   TRANSACTION_ID_MUST_BE_A_STRING: 'transactionId phải là chuỗi',
   NOTE_MUST_BE_A_STRING: 'Ghi chú phải là chuỗi',
 
-  NOT_AUTHORIZED: 'Bạn không có quyền thực hiện thao tác này'
+  NOT_AUTHORIZED: 'Bạn không có quyền thực hiện thao tác này',
+  // Review
+  CREATE_REVIEW_SUCCESS: 'Tạo đánh giá thành công',
+  GET_REVIEWS_SUCCESS: 'Lấy danh sách đánh giá thành công',
+  UPDATE_REVIEW_SUCCESS: 'Cập nhật đánh giá thành công',
+  REVIEW_NOT_FOUND: 'Không tìm thấy đánh giá',
+  TARGET_TYPE_INVALID: 'Loại đánh giá không hợp lệ (Chỉ hỗ trợ Food hoặc PT)',
+  TARGET_ID_INVALID: 'ID đối tượng đánh giá không hợp lệ',
+  TARGET_NOT_FOUND: 'Không tìm thấy đối tượng cần đánh giá',
+  RATING_INVALID: 'Điểm đánh giá phải từ 1 đến 5',
+  COMMENT_REQUIRED: 'Nội dung đánh giá không được để trống',
+  REVIEW_FORBIDDEN: 'Bạn chỉ có thể đánh giá khi đã mua hoặc sử dụng dịch vụ',
+  REVIEW_EDIT_EXPIRED: 'Chỉ có thể chỉnh sửa đánh giá trong vòng 7 ngày',
+  REVIEW_ALREADY_EXISTS: 'Bạn đã đánh giá đối tượng này rồi'
 }
