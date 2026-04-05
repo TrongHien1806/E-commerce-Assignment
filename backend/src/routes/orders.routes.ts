@@ -27,7 +27,9 @@ const ordersRouter = Router()
  * Path: /quote
  * Method: POST
  * Header: { Authorization: Bearer <access_token> }
- * Body: { deliveryAddress: string, deliveryMode: 'WEEKLY_ONCE' | 'DAILY', distanceKm?: number, deliveryDistancesKm?: number[], deliveryDates?: string[], note?: string, paymentMethod: 'COD' | 'VNPay' | 'MoMo' }
+ * Body:
+ *  - WEEKLY_ONCE: { deliveryAddress: string, deliveryMode: 'WEEKLY_ONCE', deliveryDate: string, distanceKm?: number, note?: string, paymentMethod: 'COD' | 'VNPay' | 'MoMo' }
+ *  - DAILY (combo tuần): { deliveryAddress: string, deliveryMode: 'DAILY', deliveryDates: string[7], distanceKm?: number, deliveryDistancesKm?: number[7], note?: string, paymentMethod: 'COD' | 'VNPay' | 'MoMo' }
  */
 ordersRouter.post('/quote', accessTokenValidator, quoteOrderValidator, wrapRequestHandler(quoteOrderController))
 

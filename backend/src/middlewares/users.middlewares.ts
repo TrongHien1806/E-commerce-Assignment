@@ -513,6 +513,28 @@ export const updatePTProfileValidator = validate(
   )
 )
 
+export const ptServiceIdParamValidator = validate(
+  checkSchema(
+    {
+      service_id: {
+        in: ['params'],
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.PT_SERVICE_ID_IS_REQUIRED
+        },
+        custom: {
+          options: (value: string) => {
+            if (!ObjectId.isValid(value)) {
+              throw new Error(USERS_MESSAGES.PT_SERVICE_ID_IS_INVALID)
+            }
+            return true
+          }
+        }
+      }
+    },
+    ['params']
+  )
+)
+
 export const mealRecommendationValidator = validate(
   checkSchema(
     {

@@ -306,7 +306,8 @@ class UsersService {
         ptProfile: payload.ptProfile,
         notifications: [],
         weightTracking: [],
-        calorieTracking: []
+        calorieTracking: [],
+        registeredPTServices: []
       })
     )
 
@@ -669,6 +670,99 @@ class UsersService {
     )
 
     return updatedUser
+  }
+
+  async registerPTService(user_id: string, service_id: string) {
+    const user = await databaseService.users.findOne(
+      { _id: new ObjectId(user_id) },
+      { projection: { role: 1, registeredPTServices: 1 } }
+    )
+
+    if (!user) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.USER_NOT_FOUND,
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    if (user.role !== UserRole.CUSTOMER) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.ONLY_CUSTOMER_CAN_REGISTER_PT_SERVICE,
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
+    const ptService = await databaseService.ptServices.findOne({ _id: new ObjectId(service_id) })
+    if (!ptService || !ptService.isActive) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.PT_SERVICE_NOT_FOUND,
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    const registeredServices = (user.registeredPTServices || []).map((id) => String(id))
+    if (registeredServices.includes(String(ptService._id))) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.PT_SERVICE_ALREADY_REGISTERED,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    await databaseService.users.updateOne(
+      { _id: new ObjectId(user_id) },
+      {
+        $addToSet: {
+          registeredPTServices: ptService._id
+        },
+        $currentDate: {
+          updated_at: true
+        }
+      }
+    )
+
+    return {
+      message: USERS_MESSAGES.PT_SERVICE_REGISTERED_SUCCESS,
+      result: ptService
+    }
+  }
+
+  async getMyRegisteredPTServices(user_id: string) {
+    const user = await databaseService.users.findOne(
+      { _id: new ObjectId(user_id) },
+      { projection: { role: 1, registeredPTServices: 1 } }
+    )
+
+    if (!user) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.USER_NOT_FOUND,
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    if (user.role !== UserRole.CUSTOMER) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.ONLY_CUSTOMER_CAN_REGISTER_PT_SERVICE,
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
+    const serviceIds = user.registeredPTServices || []
+    if (serviceIds.length === 0) {
+      return {
+        services: []
+      }
+    }
+
+    const services = await databaseService.ptServices.find({ _id: { $in: serviceIds } }).toArray()
+
+    const serviceMap = new Map(services.map((service) => [String(service._id), service]))
+    const orderedServices = serviceIds
+      .map((id) => serviceMap.get(String(id)))
+      .filter((service): service is (typeof services)[number] => Boolean(service))
+
+    return {
+      services: orderedServices
+    }
   }
 
   async changePassword(user_id: string, new_password: string) {

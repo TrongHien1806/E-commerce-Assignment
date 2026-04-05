@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongodb'
 
-export type OrderItemType = 'Food' | 'PTService'
 export type OrderStatus = 'Pending' | 'Cooking' | 'Delivering' | 'Completed' | 'Cancelled'
 export type PaymentMethod = 'COD' | 'VNPay' | 'MoMo'
 export type PaymentStatus = 'Pending' | 'Paid' | 'Failed'
@@ -8,11 +7,11 @@ export type DeliveryMode = 'WEEKLY_ONCE' | 'DAILY'
 export type CancelledBy = 'Customer' | 'Admin'
 
 export interface OrderItem {
-  itemType: OrderItemType
   itemId: ObjectId
   quantity: number
   price: number // snapshot giá tại thời điểm đặt
   calories: number // snapshot calories tại thời điểm đặt
+  deliveryDate: Date // ngày giao hàng, đồng thời là ngày khách ăn
 }
 
 export interface PaymentInfo {

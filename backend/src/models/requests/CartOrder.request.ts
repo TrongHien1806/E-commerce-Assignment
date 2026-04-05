@@ -1,9 +1,6 @@
 import { PaymentMethod, PaymentStatus, OrderStatus, DeliveryMode } from '~/models/schemas/Order.schema'
 
-export type CartItemType = 'Food' | 'PTService'
-
 export interface AddCartItemReqBody {
-  itemType: CartItemType
   itemId: string
   quantity: number
 }
@@ -15,9 +12,10 @@ export interface UpdateCartItemReqBody {
 export interface QuoteOrderReqBody {
   deliveryAddress: string
   deliveryMode: DeliveryMode
+  deliveryDate?: string
+  deliveryDates?: string[]
   distanceKm?: number
   deliveryDistancesKm?: number[]
-  deliveryDates?: string[]
   note?: string
   paymentMethod: PaymentMethod
 }

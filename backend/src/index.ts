@@ -9,7 +9,6 @@ import { defaultErrorHandler } from '~/middlewares/errors.middlewares'
 import ptRouter from './routes/pt.routes'
 import foodsRouter from './routes/foods.routes'
 import trackingRouter from '~/routes/tracking.routes'
-import ordersRouter from './routes/orders.routes'
 
 config()
 // connect xong thì tạo index

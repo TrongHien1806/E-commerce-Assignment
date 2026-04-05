@@ -32,13 +32,22 @@ class OrdersService {
     }
   }
 
-  private resolveDistances(payload: QuoteOrderReqBody) {
-    if (payload.deliveryMode === 'WEEKLY_ONCE') {
-      const distance = Number(payload.distanceKm ?? 0)
-      return [distance]
+  private toValidDate(value: string, invalidMessage: string) {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      throw new ErrorWithStatus({
+        message: invalidMessage,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
     }
 
-    const daysCount = payload.deliveryDates?.length || 7
+    return date
+  }
+
+  private resolveDistances(payload: QuoteOrderReqBody, daysCount: number) {
+    if (payload.deliveryMode === 'WEEKLY_ONCE') {
+      return [Number(payload.distanceKm ?? 0)]
+    }
 
     if (payload.deliveryDistancesKm?.length) {
       if (payload.deliveryDistancesKm.length !== daysCount) {
@@ -55,19 +64,26 @@ class OrdersService {
   }
 
   private resolveDeliverySchedule(payload: QuoteOrderReqBody): Date[] {
-    if (payload.deliveryDates?.length) {
-      return payload.deliveryDates.map((item) => new Date(item))
-    }
-
     if (payload.deliveryMode === 'WEEKLY_ONCE') {
-      return [new Date()]
+      if (!payload.deliveryDate) {
+        throw new ErrorWithStatus({
+          message: USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED,
+          status: HTTP_STATUS.BAD_REQUEST
+        })
+      }
+
+      return [this.toValidDate(payload.deliveryDate, USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED)]
     }
 
-    return Array.from({ length: 7 }).map((_, index) => {
-      const date = new Date()
-      date.setDate(date.getDate() + index)
-      return date
-    })
+    const deliveryDates = payload.deliveryDates || []
+    if (deliveryDates.length !== 7) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DAILY_DELIVERY_DATES_MUST_BE_7,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    return deliveryDates.map((item) => this.toValidDate(item, USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY))
   }
 
   private async getRequestUser(userId: string) {
@@ -95,19 +111,21 @@ class OrdersService {
       })
     }
 
-    const distances = this.resolveDistances(payload)
     const schedule = this.resolveDeliverySchedule(payload)
+    const daysCount = schedule.length
+    const resolvedDistances = this.resolveDistances(payload, daysCount)
 
-    if (distances.length !== schedule.length) {
+    if (resolvedDistances.length !== schedule.length) {
       throw new ErrorWithStatus({
         message: USERS_MESSAGES.DELIVERY_SCHEDULE_DISTANCE_MISMATCH,
         status: HTTP_STATUS.BAD_REQUEST
       })
     }
 
-    const shippingBreakdowns = distances.map((distance) => this.calculateShippingForDistance(distance))
+    const shippingBreakdowns = resolvedDistances.map((distance) => this.calculateShippingForDistance(distance))
     const shippingFee = shippingBreakdowns.reduce((sum, item) => sum + item.totalFee, 0)
-    const subtotal = cart.summary.subtotal
+    const subtotal = cart.summary.subtotal * daysCount
+    const totalCalories = cart.summary.totalCalories * daysCount
 
     return {
       cart,
@@ -115,12 +133,14 @@ class OrdersService {
         subtotal,
         shippingFee,
         grandTotal: subtotal + shippingFee,
-        shippingBreakdowns
+        shippingBreakdowns,
+        totalCalories
       },
       delivery: {
         mode: payload.deliveryMode,
         address: payload.deliveryAddress,
-        schedule
+        schedule,
+        daysCount
       },
       payment: {
         method: payload.paymentMethod
@@ -132,13 +152,15 @@ class OrdersService {
   async createOrder(userId: string, payload: CreateOrderReqBody) {
     const quote = await this.quoteOrder(userId, payload)
 
-    const items = quote.cart.items.map((item) => ({
-      itemType: item.itemType,
-      itemId: new ObjectId(String(item.itemId)),
-      quantity: item.quantity,
-      price: item.unitPrice,
-      calories: item.unitCalories
-    }))
+    const items = quote.delivery.schedule.flatMap((deliveryDate) =>
+      quote.cart.items.map((item) => ({
+        itemId: new ObjectId(String(item.itemId)),
+        quantity: item.quantity,
+        price: item.unitPrice,
+        calories: item.unitCalories,
+        deliveryDate: new Date(deliveryDate)
+      }))
+    )
 
     const order = new Order({
       userId: new ObjectId(userId),

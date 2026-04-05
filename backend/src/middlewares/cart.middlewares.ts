@@ -5,15 +5,6 @@ import { validate } from '~/utils/validation'
 export const addCartItemValidator = validate(
   checkSchema(
     {
-      itemType: {
-        notEmpty: {
-          errorMessage: USERS_MESSAGES.CART_ITEM_TYPE_IS_REQUIRED
-        },
-        isIn: {
-          options: [['Food', 'PTService']],
-          errorMessage: USERS_MESSAGES.CART_ITEM_TYPE_IS_INVALID
-        }
-      },
       itemId: {
         notEmpty: {
           errorMessage: USERS_MESSAGES.CART_ITEM_ID_IS_REQUIRED
@@ -47,15 +38,6 @@ export const updateCartItemQuantityValidator = validate(
           errorMessage: USERS_MESSAGES.CART_ITEM_ID_IS_INVALID
         }
       },
-      itemType: {
-        notEmpty: {
-          errorMessage: USERS_MESSAGES.CART_ITEM_TYPE_IS_REQUIRED
-        },
-        isIn: {
-          options: [['Food', 'PTService']],
-          errorMessage: USERS_MESSAGES.CART_ITEM_TYPE_IS_INVALID
-        }
-      },
       quantity: {
         notEmpty: {
           errorMessage: USERS_MESSAGES.CART_QUANTITY_IS_REQUIRED
@@ -80,17 +62,8 @@ export const removeCartItemValidator = validate(
         isMongoId: {
           errorMessage: USERS_MESSAGES.CART_ITEM_ID_IS_INVALID
         }
-      },
-      itemType: {
-        notEmpty: {
-          errorMessage: USERS_MESSAGES.CART_ITEM_TYPE_IS_REQUIRED
-        },
-        isIn: {
-          options: [['Food', 'PTService']],
-          errorMessage: USERS_MESSAGES.CART_ITEM_TYPE_IS_INVALID
-        }
       }
     },
-    ['params', 'query']
+    ['params']
   )
 )

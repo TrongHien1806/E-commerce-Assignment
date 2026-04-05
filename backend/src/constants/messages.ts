@@ -55,6 +55,13 @@ export const USERS_MESSAGES = {
   PROFILE_UPDATED_SUCCESS: 'Cập nhật hồ sơ thành công',
   PT_PROFILE_UPDATED_SUCCESS: 'Cập nhật hồ sơ PT thành công',
   ONLY_PT_CAN_UPDATE_PT_PROFILE: 'Chỉ tài khoản PT mới có thể cập nhật hồ sơ PT',
+  ONLY_CUSTOMER_CAN_REGISTER_PT_SERVICE: 'Chỉ khách hàng mới có thể đăng ký gói PT',
+  PT_SERVICE_ID_IS_REQUIRED: 'PT service id là bắt buộc',
+  PT_SERVICE_ID_IS_INVALID: 'PT service id không đúng định dạng',
+  PT_SERVICE_NOT_FOUND: 'Không tìm thấy gói dịch vụ PT',
+  PT_SERVICE_ALREADY_REGISTERED: 'Bạn đã đăng ký gói PT này rồi',
+  PT_SERVICE_REGISTERED_SUCCESS: 'Đăng ký gói PT thành công',
+  REGISTERED_PT_SERVICES_RETRIEVED_SUCCESS: 'Lấy danh sách gói PT đã đăng ký thành công',
 
   HEALTH_PROFILE_UPDATED_SUCCESS: 'Cập nhật hồ sơ sức khỏe thành công',
   HEALTH_METRICS_RETRIEVED_SUCCESS: 'Lấy chỉ số sức khỏe thành công',
@@ -114,6 +121,7 @@ export const USERS_MESSAGES = {
   CART_QUANTITY_MUST_BE_POSITIVE: 'Số lượng phải lớn hơn 0',
   CART_QUANTITY_MUST_BE_ZERO_OR_POSITIVE: 'Số lượng phải lớn hơn hoặc bằng 0',
   CART_PT_SERVICE_QUANTITY_MUST_BE_ONE: 'Dịch vụ PT chỉ có thể chọn số lượng là 1',
+  CART_PT_SERVICE_QUANTITY_NOT_ALLOWED: 'Dịch vụ PT không nhận trường số lượng, hệ thống mặc định là 1',
   CART_FOOD_QUANTITY_EXCEEDS_STOCK: 'Số lượng món ăn vượt quá tồn kho hiện tại',
 
   // Order + Checkout + Payment
@@ -137,11 +145,15 @@ export const USERS_MESSAGES = {
   DELIVERY_ADDRESS_MUST_BE_A_STRING: 'Địa chỉ giao hàng phải là chuỗi',
   DELIVERY_MODE_IS_REQUIRED: 'deliveryMode là bắt buộc',
   DELIVERY_MODE_IS_INVALID: 'deliveryMode không hợp lệ',
+  DELIVERY_DATE_IS_REQUIRED: 'deliveryDate là bắt buộc khi đặt theo 1 ngày',
+  DAILY_DELIVERY_DATES_MUST_BE_7: 'deliveryDates phải gồm đúng 7 ngày khi đặt combo tuần',
   DISTANCE_KM_MUST_BE_A_NON_NEGATIVE_NUMBER: 'distanceKm phải là số không âm',
   DELIVERY_DISTANCES_MUST_BE_ARRAY: 'deliveryDistancesKm phải là mảng số',
   DELIVERY_DATES_MUST_BE_ARRAY: 'deliveryDates phải là mảng ngày',
   DELIVERY_SCHEDULE_DISTANCE_MISMATCH: 'Số ngày giao và số khoảng cách không khớp',
   DAILY_DISTANCE_COUNT_MISMATCH: 'deliveryDistancesKm phải có cùng số phần tử với deliveryDates',
+  ORDER_MIXED_ITEM_TYPES_NOT_ALLOWED:
+    'Không thể đặt chung món ăn và dịch vụ PT trong cùng một đơn. Vui lòng tách đơn riêng',
 
   PAYMENT_METHOD_IS_REQUIRED: 'Phương thức thanh toán là bắt buộc',
   PAYMENT_METHOD_IS_INVALID: 'Phương thức thanh toán không hợp lệ',

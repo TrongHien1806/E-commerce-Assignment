@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import ptService from '~/services/pt.services'
 import HTTP_STATUS from '~/constants/httpStatus'
+import { TokenPayload } from '~/models/requests/User.request'
 
 type PTServiceParams = {
   service_id: string
@@ -12,7 +13,7 @@ type PTServiceListQuery = {
 }
 
 type CreatePTServiceBody = {
-  ptId: string
+  ptId?: string
   title: string
   description: string
   price: number
@@ -22,7 +23,7 @@ type CreatePTServiceBody = {
 }
 
 export const getPTServiceListController = async (
-  req: Request<Record<string, never>, any, any, PTServiceListQuery>,
+  req: Request<Record<string, never>, Record<string, never>, Record<string, never>, PTServiceListQuery>,
   res: Response
 ) => {
   const limit = Math.max(1, Number(req.query.limit) || 10)
@@ -47,10 +48,11 @@ export const getPTServiceDetailController = async (req: Request<PTServiceParams>
 }
 
 export const createPTServiceController = async (
-  req: Request<Record<string, never>, any, CreatePTServiceBody>,
+  req: Request<Record<string, never>, Record<string, never>, CreatePTServiceBody>,
   res: Response
 ) => {
-  const result = await ptService.createPTService(req.body)
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await ptService.createPTService(decoded_authorization.user_id, req.body)
 
   return res.status(HTTP_STATUS.CREATED).json({
     message: 'Tạo gói PT thành công',

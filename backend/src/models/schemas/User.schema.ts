@@ -62,6 +62,10 @@ export interface CalorieTracking {
   caloriesConsumed: number
 }
 
+export interface RegisteredPTService {
+  serviceId: ObjectId
+}
+
 export interface UserType {
   _id?: ObjectId
   email: string
@@ -80,6 +84,7 @@ export interface UserType {
   notifications: Notification[]
   weightTracking: WeightTracking[]
   calorieTracking: CalorieTracking[]
+  registeredPTServices: ObjectId[]
 }
 
 export default class User implements UserType {
@@ -100,6 +105,7 @@ export default class User implements UserType {
   notifications: Notification[]
   weightTracking: WeightTracking[]
   calorieTracking: CalorieTracking[]
+  registeredPTServices: ObjectId[]
 
   constructor(user: UserType) {
     this._id = user._id
@@ -117,6 +123,7 @@ export default class User implements UserType {
     this.notifications = user.notifications || []
     this.weightTracking = user.weightTracking || []
     this.calorieTracking = user.calorieTracking || []
+    this.registeredPTServices = user.registeredPTServices || []
     const now = new Date()
     this.created_at = user.created_at || now
     this.updated_at = user.updated_at || now

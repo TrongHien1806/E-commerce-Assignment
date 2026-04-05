@@ -1,9 +1,6 @@
 import { ObjectId } from 'mongodb'
 
-export type CartItemType = 'Food' | 'PTService'
-
 export interface CartItem {
-  itemType: CartItemType
   itemId: ObjectId // reference đến foods hoặc pt_services
   quantity: number
   priceAtOrder: number
@@ -32,7 +29,7 @@ export default class Cart implements CartType {
   }
   // Helper method để thêm item vào giỏ
   addItem(item: CartItem) {
-    const existingItem = this.items.find((i) => i.itemType === item.itemType && i.itemId.equals(item.itemId))
+    const existingItem = this.items.find((i) => i.itemId.equals(item.itemId))
     if (existingItem) {
       existingItem.quantity += item.quantity
       existingItem.priceAtOrder = item.priceAtOrder // update giá tại thời điểm order
@@ -43,8 +40,8 @@ export default class Cart implements CartType {
   }
 
   // Helper method để xóa item khỏi giỏ
-  removeItem(itemId: ObjectId, itemType: CartItemType) {
-    this.items = this.items.filter((i) => !(i.itemId.equals(itemId) && i.itemType === itemType))
+  removeItem(itemId: ObjectId) {
+    this.items = this.items.filter((i) => !i.itemId.equals(itemId))
     this.updatedAt = new Date()
   }
 }

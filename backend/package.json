@@ -11,7 +11,9 @@
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --check .",
     "prettier:fix": "prettier --write .",
-    "seed:cart": "npx tsx scripts/seed-cart.ts"
+    "seed:cart": "npx tsx scripts/seed-cart.ts",
+    "seed:pt-services": "npx tsx scripts/seed-pt-services.ts",
+    "seed:admin": "npx tsx scripts/seed-admin.ts"
   },
   "keywords": [],
   "author": "",

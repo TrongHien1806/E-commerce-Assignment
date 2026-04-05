@@ -65,7 +65,8 @@ async function ensureCustomer(db: ReturnType<MongoClient['db']>) {
     forgot_password_token: '',
     notifications: [],
     weightTracking: [],
-    calorieTracking: []
+    calorieTracking: [],
+    registeredPTServices: []
   })
 
   const result = await users.insertOne(customer)
@@ -102,7 +103,8 @@ async function ensureFoodAndPTService(db: ReturnType<MongoClient['db']>) {
       },
       notifications: [],
       weightTracking: [],
-      calorieTracking: []
+      calorieTracking: [],
+      registeredPTServices: []
     })
 
     const insertedPT = await users.insertOne(pt)
@@ -144,16 +146,9 @@ async function seedCart() {
       userId: customerId,
       items: [
         {
-          itemType: 'Food',
           itemId: foodId,
           quantity: 2,
           priceAtOrder: Number(food.price || 0)
-        },
-        {
-          itemType: 'PTService',
-          itemId: ptServiceId,
-          quantity: 1,
-          priceAtOrder: 1800000
         }
       ]
     })

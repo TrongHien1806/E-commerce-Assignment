@@ -16,7 +16,6 @@ class TrackingService {
 
     const inputDate = new Date(payload.date)
     inputDate.setHours(0, 0, 0, 0)
-
     const existingIndex =
       user.weightTracking?.findIndex((item) => {
         const d = new Date(item.date)

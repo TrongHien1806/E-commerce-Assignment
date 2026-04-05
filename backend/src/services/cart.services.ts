@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
-import Cart, { CartItemType } from '~/models/schemas/Cart.schema'
+import Cart from '~/models/schemas/Cart.schema'
 import databaseService from '~/services/database.services'
 
 interface FoodProjection {
@@ -15,15 +15,7 @@ interface FoodProjection {
   stock: number
 }
 
-interface PTServiceProjection {
-  _id: ObjectId
-  title: string
-  price: number
-  isActive: boolean
-}
-
 export interface CartSummaryItem {
-  itemType: CartItemType
   itemId: ObjectId
   quantity: number
   itemName: string
@@ -64,68 +56,32 @@ class CartService {
     return new Map(foods.map((food) => [String(food._id), food as FoodProjection]))
   }
 
-  private async getPTServiceMap(serviceIds: ObjectId[]) {
-    if (serviceIds.length === 0) return new Map<string, PTServiceProjection>()
-    const services = await databaseService.ptServices
-      .find({ _id: { $in: serviceIds } })
-      .project({ _id: 1, title: 1, price: 1, isActive: 1 })
-      .toArray()
-
-    return new Map(services.map((service) => [String(service._id), service as PTServiceProjection]))
-  }
-
   async buildCartSummary(userId: string) {
     const cart = await this.getOrCreateCart(userId)
 
-    const foodIds = cart.items.filter((item) => item.itemType === 'Food').map((item) => item.itemId)
-    const serviceIds = cart.items.filter((item) => item.itemType === 'PTService').map((item) => item.itemId)
-
-    const [foodMap, serviceMap] = await Promise.all([this.getFoodMap(foodIds), this.getPTServiceMap(serviceIds)])
+    const foodIds = cart.items.map((item) => item.itemId)
+    const foodMap = await this.getFoodMap(foodIds)
 
     const normalizedItems: CartSummaryItem[] = []
 
     for (const item of cart.items) {
-      if (item.itemType === 'Food') {
-        const food = foodMap.get(String(item.itemId))
-        if (!food) continue
+      const food = foodMap.get(String(item.itemId))
+      if (!food) continue
 
-        const unitPrice = Number(food.price || 0)
-        const unitCalories = Number(food.calories || 0)
-        normalizedItems.push({
-          itemType: item.itemType,
-          itemId: item.itemId,
-          quantity: item.quantity,
-          itemName: food.name,
-          image: Array.isArray(food.images) ? food.images[0] || null : null,
-          unitPrice,
-          unitCalories,
-          lineTotal: unitPrice * item.quantity,
-          lineCalories: unitCalories * item.quantity,
-          availability: {
-            isActive: Boolean(food.isActive),
-            inStock: Number(food.stock || 0) >= item.quantity
-          }
-        })
-        continue
-      }
-
-      const service = serviceMap.get(String(item.itemId))
-      if (!service) continue
-
-      const unitPrice = Number(service.price || 0)
+      const unitPrice = Number(food.price || 0)
+      const unitCalories = Number(food.calories || 0)
       normalizedItems.push({
-        itemType: item.itemType,
         itemId: item.itemId,
         quantity: item.quantity,
-        itemName: service.title,
-        image: null,
+        itemName: food.name,
+        image: Array.isArray(food.images) ? food.images[0] || null : null,
         unitPrice,
-        unitCalories: 0,
+        unitCalories,
         lineTotal: unitPrice * item.quantity,
-        lineCalories: 0,
+        lineCalories: unitCalories * item.quantity,
         availability: {
-          isActive: Boolean(service.isActive),
-          inStock: true
+          isActive: Boolean(food.isActive),
+          inStock: Number(food.stock || 0) >= item.quantity
         }
       })
     }
@@ -152,23 +108,9 @@ class CartService {
     }
   }
 
-  private async ensurePurchasableItem(itemType: CartItemType, itemId: ObjectId) {
-    if (itemType === 'Food') {
-      const food = await databaseService.foods.findOne({ _id: itemId })
-      if (!food || !food.isActive || food.stock <= 0) {
-        throw new ErrorWithStatus({
-          message: USERS_MESSAGES.CART_ITEM_NOT_AVAILABLE,
-          status: HTTP_STATUS.BAD_REQUEST
-        })
-      }
-      return {
-        price: Number(food.price),
-        stock: Number(food.stock)
-      }
-    }
-
-    const ptService = await databaseService.ptServices.findOne({ _id: itemId })
-    if (!ptService || !ptService.isActive) {
+  private async ensurePurchasableFood(itemId: ObjectId) {
+    const food = await databaseService.foods.findOne({ _id: itemId })
+    if (!food || !food.isActive || food.stock <= 0) {
       throw new ErrorWithStatus({
         message: USERS_MESSAGES.CART_ITEM_NOT_AVAILABLE,
         status: HTTP_STATUS.BAD_REQUEST
@@ -176,31 +118,12 @@ class CartService {
     }
 
     return {
-      price: Number(ptService.price)
+      price: Number(food.price),
+      stock: Number(food.stock)
     }
   }
 
-  private validateQuantityRules(itemType: CartItemType, quantity: number, foodStock?: number) {
-    if (itemType === 'PTService' && quantity !== 1) {
-      throw new ErrorWithStatus({
-        message: USERS_MESSAGES.CART_PT_SERVICE_QUANTITY_MUST_BE_ONE,
-        status: HTTP_STATUS.BAD_REQUEST
-      })
-    }
-
-    if (itemType === 'Food' && typeof foodStock === 'number' && quantity > foodStock) {
-      throw new ErrorWithStatus({
-        message: USERS_MESSAGES.CART_FOOD_QUANTITY_EXCEEDS_STOCK,
-        status: HTTP_STATUS.BAD_REQUEST
-      })
-    }
-  }
-
-  async addItem(userId: string, payload: { itemType: CartItemType; itemId: string; quantity: number }) {
-    const cart = await this.getOrCreateCart(userId)
-    const itemObjectId = new ObjectId(payload.itemId)
-    const quantity = payload.quantity
-
+  private validateQuantityRules(quantity: number, foodStock?: number) {
     if (quantity <= 0) {
       throw new ErrorWithStatus({
         message: USERS_MESSAGES.CART_QUANTITY_MUST_BE_POSITIVE,
@@ -208,21 +131,38 @@ class CartService {
       })
     }
 
-    const purchasable = await this.ensurePurchasableItem(payload.itemType, itemObjectId)
+    if (typeof foodStock === 'number' && quantity > foodStock) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.CART_FOOD_QUANTITY_EXCEEDS_STOCK,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+  }
 
-    const existing = cart.items.find(
-      (item) => item.itemType === payload.itemType && String(item.itemId) === String(itemObjectId)
-    )
+  async addItem(userId: string, payload: { itemId: string; quantity: number }) {
+    const cart = await this.getOrCreateCart(userId)
+    const itemObjectId = new ObjectId(payload.itemId)
+    const quantity = Number(payload.quantity)
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.CART_QUANTITY_MUST_BE_POSITIVE,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const purchasable = await this.ensurePurchasableFood(itemObjectId)
+
+    const existing = cart.items.find((item) => String(item.itemId) === String(itemObjectId))
 
     const nextQuantity = existing ? existing.quantity + quantity : quantity
-    this.validateQuantityRules(payload.itemType, nextQuantity, purchasable.stock)
+    this.validateQuantityRules(nextQuantity, purchasable.stock)
 
     if (existing) {
       existing.quantity = nextQuantity
       existing.priceAtOrder = purchasable.price
     } else {
       cart.items.push({
-        itemType: payload.itemType,
         itemId: itemObjectId,
         quantity: nextQuantity,
         priceAtOrder: purchasable.price
@@ -242,12 +182,10 @@ class CartService {
     return this.buildCartSummary(userId)
   }
 
-  async updateItemQuantity(userId: string, payload: { itemType: CartItemType; itemId: string; quantity: number }) {
+  async updateItemQuantity(userId: string, payload: { itemId: string; quantity: number }) {
     const cart = await this.getOrCreateCart(userId)
     const itemObjectId = new ObjectId(payload.itemId)
-    const target = cart.items.find(
-      (item) => item.itemType === payload.itemType && String(item.itemId) === String(itemObjectId)
-    )
+    const target = cart.items.find((item) => String(item.itemId) === String(itemObjectId))
 
     if (!target) {
       throw new ErrorWithStatus({
@@ -257,12 +195,10 @@ class CartService {
     }
 
     if (payload.quantity <= 0) {
-      cart.items = cart.items.filter(
-        (item) => !(item.itemType === payload.itemType && String(item.itemId) === String(itemObjectId))
-      )
+      cart.items = cart.items.filter((item) => String(item.itemId) !== String(itemObjectId))
     } else {
-      const purchasable = await this.ensurePurchasableItem(payload.itemType, itemObjectId)
-      this.validateQuantityRules(payload.itemType, payload.quantity, purchasable.stock)
+      const purchasable = await this.ensurePurchasableFood(itemObjectId)
+      this.validateQuantityRules(payload.quantity, purchasable.stock)
       target.quantity = payload.quantity
       target.priceAtOrder = purchasable.price
     }
@@ -280,11 +216,11 @@ class CartService {
     return this.buildCartSummary(userId)
   }
 
-  async removeItem(userId: string, itemType: CartItemType, itemId: string) {
+  async removeItem(userId: string, itemId: string) {
     const cart = await this.getOrCreateCart(userId)
     const before = cart.items.length
 
-    cart.items = cart.items.filter((item) => !(item.itemType === itemType && String(item.itemId) === itemId))
+    cart.items = cart.items.filter((item) => String(item.itemId) !== itemId)
 
     if (before === cart.items.length) {
       throw new ErrorWithStatus({

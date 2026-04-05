@@ -163,6 +163,23 @@ export const updatePTProfileController = async (
   })
 }
 
+export const registerPTServiceController = async (req: Request<{ service_id: string }>, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.registerPTService(decoded_authorization.user_id, req.params.service_id)
+
+  return res.status(HTTP_STATUS.OK).json(result)
+}
+
+export const getMyRegisteredPTServicesController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const result = await usersService.getMyRegisteredPTServices(decoded_authorization.user_id)
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: USERS_MESSAGES.REGISTERED_PT_SERVICES_RETRIEVED_SUCCESS,
+    result
+  })
+}
+
 export const recommendMealsController = async (
   req: Request<ParamsDictionary, Record<string, never>, MealRecommendationReqBody>,
   res: Response

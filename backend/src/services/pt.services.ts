@@ -3,6 +3,7 @@ import databaseService from './database.services'
 import PTService from '~/models/schemas/PTService.schema'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { ErrorWithStatus } from '~/models/Errors'
+import { UserRole } from '~/models/schemas/User.schema'
 
 class PTServiceLayer {
   async getPTUserByUsername(username: string) {
@@ -95,24 +96,71 @@ class PTServiceLayer {
     }
   }
 
-  async createPTService(payload: {
-    ptId: string
+  async createPTService(
+    requester_user_id: string,
+    payload: {
+      ptId?: string
     title: string
     description: string
     price: number
     sessions: number
     durationDays: number
     isActive?: boolean
-  }) {
-    if (!ObjectId.isValid(payload.ptId)) {
+    }
+  ) {
+    if (!ObjectId.isValid(requester_user_id)) {
       throw new ErrorWithStatus({
-        message: 'PT id không hợp lệ',
+        message: 'User id không hợp lệ',
         status: HTTP_STATUS.BAD_REQUEST
       })
     }
 
+    const requester = await databaseService.users.findOne(
+      { _id: new ObjectId(requester_user_id) },
+      { projection: { role: 1 } }
+    )
+
+    if (!requester) {
+      throw new ErrorWithStatus({
+        message: 'Không tìm thấy người dùng',
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    let resolvedPTId: ObjectId
+
+    if (requester.role === UserRole.PT) {
+      resolvedPTId = new ObjectId(requester_user_id)
+    } else if (requester.role === UserRole.ADMIN) {
+      if (!payload.ptId || !ObjectId.isValid(payload.ptId)) {
+        throw new ErrorWithStatus({
+          message: 'PT id không hợp lệ',
+          status: HTTP_STATUS.BAD_REQUEST
+        })
+      }
+
+      const ptUser = await databaseService.users.findOne({
+        _id: new ObjectId(payload.ptId),
+        role: UserRole.PT
+      })
+
+      if (!ptUser) {
+        throw new ErrorWithStatus({
+          message: 'Không tìm thấy tài khoản PT',
+          status: HTTP_STATUS.NOT_FOUND
+        })
+      }
+
+      resolvedPTId = new ObjectId(payload.ptId)
+    } else {
+      throw new ErrorWithStatus({
+        message: 'Bạn không có quyền thực hiện thao tác này',
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
     const service = new PTService({
-      ptId: new ObjectId(payload.ptId),
+      ptId: resolvedPTId,
       title: payload.title.trim(),
       description: payload.description.trim(),
       price: payload.price,

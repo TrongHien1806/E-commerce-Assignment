@@ -28,6 +28,12 @@ export const quoteOrderValidator = validate(
           errorMessage: USERS_MESSAGES.DELIVERY_MODE_IS_INVALID
         }
       },
+      deliveryDate: {
+        optional: true,
+        isISO8601: {
+          errorMessage: USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY
+        }
+      },
       distanceKm: {
         optional: true,
         isFloat: {
@@ -60,6 +66,36 @@ export const quoteOrderValidator = validate(
         optional: true,
         isArray: {
           errorMessage: USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY
+        }
+      },
+      'deliveryDates.*': {
+        optional: true,
+        isISO8601: {
+          errorMessage: USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY
+        }
+      },
+      _deliveryDateByMode: {
+        custom: {
+          options: (_value, { req }) => {
+            const mode = req.body?.deliveryMode
+            const deliveryDate = req.body?.deliveryDate
+            const deliveryDates = req.body?.deliveryDates
+
+            if (mode === 'WEEKLY_ONCE') {
+              if (!deliveryDate) {
+                throw new Error(USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED)
+              }
+              return true
+            }
+
+            if (mode === 'DAILY') {
+              if (!Array.isArray(deliveryDates) || deliveryDates.length !== 7) {
+                throw new Error(USERS_MESSAGES.DAILY_DELIVERY_DATES_MUST_BE_7)
+              }
+            }
+
+            return true
+          }
         }
       }
     },

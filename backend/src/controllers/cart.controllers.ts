@@ -30,14 +30,13 @@ export const addCartItemController = async (
 }
 
 export const updateCartItemQuantityController = async (
-  req: Request<{ itemId: string }, Record<string, never>, UpdateCartItemReqBody, { itemType: 'Food' | 'PTService' }>,
+  req: Request<{ itemId: string }, Record<string, never>, UpdateCartItemReqBody>,
   res: Response
 ) => {
   const decoded = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
 
   const result = await cartService.updateItemQuantity(decoded.user_id, {
     itemId: req.params.itemId,
-    itemType: req.query.itemType,
     quantity: req.body.quantity
   })
 
@@ -48,12 +47,12 @@ export const updateCartItemQuantityController = async (
 }
 
 export const removeCartItemController = async (
-  req: Request<{ itemId: string }, Record<string, never>, Record<string, never>, { itemType: 'Food' | 'PTService' }>,
+  req: Request<{ itemId: string }>,
   res: Response
 ) => {
   const decoded = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
 
-  const result = await cartService.removeItem(decoded.user_id, req.query.itemType, req.params.itemId)
+  const result = await cartService.removeItem(decoded.user_id, req.params.itemId)
 
   return res.status(HTTP_STATUS.OK).json({
     message: USERS_MESSAGES.CART_ITEM_REMOVED_SUCCESS,

@@ -11,6 +11,7 @@ import {
   refreshTokenValidator,
   registerValidator,
   resetPasswordValidator,
+  ptServiceIdParamValidator,
   swapMealRecommendationValidator,
   updateMeValidator,
   updatePTProfileValidator
@@ -28,6 +29,8 @@ import {
   recommendPTController,
   refreshTokenController,
   registerController,
+  registerPTServiceController,
+  getMyRegisteredPTServicesController,
   resetPasswordController,
   swapMealRecommendationController,
   updateMeController,
@@ -133,6 +136,28 @@ usersRouter.patch(
   updatePTProfileValidator,
   wrapRequestHandler(updatePTProfileController)
 )
+
+/**
+ * Description. Register a PT service package for current customer
+ * Path: /me/pt-services/:service_id/register
+ * Method: POST
+ * Header: { Authorization: Bearer <access_token> }
+ * Params: { service_id: string }
+ */
+usersRouter.post(
+  '/me/pt-services/:service_id/register',
+  accessTokenValidator,
+  ptServiceIdParamValidator,
+  wrapRequestHandler(registerPTServiceController)
+)
+
+/**
+ * Description. Get all PT service packages registered by current customer
+ * Path: /me/pt-services
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ */
+usersRouter.get('/me/pt-services', accessTokenValidator, wrapRequestHandler(getMyRegisteredPTServicesController))
 
 /**
  * Description. Intake or update health profile and auto-calculate metrics
