@@ -95,6 +95,13 @@ export const USERS_MESSAGES = {
   NO_FOOD_MATCHES_RESTRICTIONS: 'Không tìm thấy món ăn phù hợp với dị ứng/kiêng kỵ của bạn',
   NO_SWAP_CANDIDATE_FOUND: 'Không tìm thấy món thay thế phù hợp',
 
+  // Tracking
+  CALORIES_LOG_CREATED_SUCCESS: 'Ghi nhận calories thành công',
+  CALORIES_HISTORY_RETRIEVED_SUCCESS: 'Lấy lịch sử calo thành công',
+  CALORIES_TODAY_RETRIEVED_SUCCESS: 'Lấy calo hôm nay thành công',
+  CALORIES_CONSUMED_IS_REQUIRED: 'Calories tiêu thụ là bắt buộc',
+  CALORIES_CONSUMED_MUST_BE_NON_NEGATIVE: 'Calories tiêu thụ phải là số không âm',
+
   PT_SUCCESSFULLY_REGISTERED:
     'Hồ sơ của bạn đã được ghi nhận. Quản trị viên sẽ liên hệ và xét duyệt tài khoản của bạn trong vòng 24 giờ. Vui lòng chờ email thông báo',
   // Controller messages
@@ -115,6 +122,7 @@ export const USERS_MESSAGES = {
   CART_ITEM_NOT_AVAILABLE: 'Sản phẩm hiện không khả dụng',
   CART_ITEM_ID_IS_REQUIRED: 'itemId là bắt buộc',
   CART_ITEM_ID_IS_INVALID: 'itemId không đúng định dạng',
+  CART_TYPE_IS_INVALID: 'cartType không hợp lệ',
   CART_ITEM_TYPE_IS_REQUIRED: 'itemType là bắt buộc',
   CART_ITEM_TYPE_IS_INVALID: 'itemType không hợp lệ',
   CART_QUANTITY_IS_REQUIRED: 'Số lượng là bắt buộc',
@@ -146,6 +154,7 @@ export const USERS_MESSAGES = {
   DELIVERY_MODE_IS_REQUIRED: 'deliveryMode là bắt buộc',
   DELIVERY_MODE_IS_INVALID: 'deliveryMode không hợp lệ',
   DELIVERY_DATE_IS_REQUIRED: 'deliveryDate là bắt buộc khi đặt theo 1 ngày',
+  PACKAGE_TYPE_IS_INVALID: 'packageType không hợp lệ',
   DAILY_DELIVERY_DATES_MUST_BE_7: 'deliveryDates phải gồm đúng 7 ngày khi đặt combo tuần',
   DISTANCE_KM_MUST_BE_A_NON_NEGATIVE_NUMBER: 'distanceKm phải là số không âm',
   DELIVERY_DISTANCES_MUST_BE_ARRAY: 'deliveryDistancesKm phải là mảng số',
@@ -154,6 +163,7 @@ export const USERS_MESSAGES = {
   DAILY_DISTANCE_COUNT_MISMATCH: 'deliveryDistancesKm phải có cùng số phần tử với deliveryDates',
   ORDER_MIXED_ITEM_TYPES_NOT_ALLOWED:
     'Không thể đặt chung món ăn và dịch vụ PT trong cùng một đơn. Vui lòng tách đơn riêng',
+  WEEKLY_PACKAGE_REQUIRES_COMBO_CART: 'Gói WEEKLY_7D chỉ áp dụng cho giỏ COMBO',
 
   PAYMENT_METHOD_IS_REQUIRED: 'Phương thức thanh toán là bắt buộc',
   PAYMENT_METHOD_IS_INVALID: 'Phương thức thanh toán không hợp lệ',

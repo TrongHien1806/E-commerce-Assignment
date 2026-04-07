@@ -215,7 +215,15 @@ Tài liệu này mô tả phạm vi công việc cho các module backend đã ch
 - `POST /tracking/weight`
 - `GET /tracking/weight`
 - `POST /tracking/calories`
+- `GET /tracking/calories`
 - `GET /tracking/calories/today`
+
+### Cơ chế lưu trữ
+
+- Mỗi lần order chuyển sang `Completed`, hệ thống tự ghi một calorie log
+- User cũng có thể nhập tay calories bằng `POST /tracking/calories`
+- `GET /tracking/calories` trả về lịch sử calories đã aggregate theo ngày
+- `GET /tracking/calories/today` trả về calories của riêng hôm nay
 
 ### Đầu ra mong đợi
 

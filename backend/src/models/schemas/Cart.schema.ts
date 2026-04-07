@@ -1,7 +1,9 @@
 import { ObjectId } from 'mongodb'
 
+export type CartTypeValue = 'FOOD' | 'COMBO'
+
 export interface CartItem {
-  itemId: ObjectId // reference đến foods hoặc pt_services
+  itemId: ObjectId // reference đến foods
   quantity: number
   priceAtOrder: number
 }
@@ -9,6 +11,7 @@ export interface CartItem {
 export interface CartType {
   _id?: ObjectId
   userId: ObjectId
+  cartType: CartTypeValue
   items: CartItem[]
   createdAt?: Date
   updatedAt?: Date
@@ -16,12 +19,14 @@ export interface CartType {
 export default class Cart implements CartType {
   _id?: ObjectId
   userId: ObjectId
+  cartType: CartTypeValue
   items: CartItem[]
   createdAt?: Date
   updatedAt?: Date
   constructor(cart: CartType) {
     this._id = cart._id
     this.userId = cart.userId
+    this.cartType = cart.cartType
     this.items = cart.items
     const now = new Date()
     this.createdAt = cart.createdAt || now

@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
-import Cart from '~/models/schemas/Cart.schema'
+import Cart, { CartTypeValue } from '~/models/schemas/Cart.schema'
 import databaseService from '~/services/database.services'
 
 interface FoodProjection {
@@ -13,6 +13,7 @@ interface FoodProjection {
   price: number
   isActive: boolean
   stock: number
+  isCombo: boolean
 }
 
 export interface CartSummaryItem {
@@ -31,14 +32,15 @@ export interface CartSummaryItem {
 }
 
 class CartService {
-  private async getOrCreateCart(userId: string) {
+  private async getOrCreateCart(userId: string, cartType: CartTypeValue) {
     const userObjectId = new ObjectId(userId)
-    const existing = await databaseService.carts.findOne({ userId: userObjectId })
+    const existing = await databaseService.carts.findOne({ userId: userObjectId, cartType })
 
     if (existing) return existing
 
     const newCart = new Cart({
       userId: userObjectId,
+      cartType,
       items: []
     })
 
@@ -50,14 +52,14 @@ class CartService {
     if (foodIds.length === 0) return new Map<string, FoodProjection>()
     const foods = await databaseService.foods
       .find({ _id: { $in: foodIds } })
-      .project({ _id: 1, name: 1, images: 1, calories: 1, price: 1, isActive: 1, stock: 1 })
+      .project({ _id: 1, name: 1, images: 1, calories: 1, price: 1, isActive: 1, stock: 1, isCombo: 1 })
       .toArray()
 
     return new Map(foods.map((food) => [String(food._id), food as FoodProjection]))
   }
 
-  async buildCartSummary(userId: string) {
-    const cart = await this.getOrCreateCart(userId)
+  async buildCartSummaryByType(userId: string, cartType: CartTypeValue) {
+    const cart = await this.getOrCreateCart(userId, cartType)
 
     const foodIds = cart.items.map((item) => item.itemId)
     const foodMap = await this.getFoodMap(foodIds)
@@ -103,8 +105,21 @@ class CartService {
     return {
       cartId: cart._id,
       userId: cart.userId,
+      cartType: cart.cartType,
       items: normalizedItems,
       summary
+    }
+  }
+
+  async buildCartSummary(userId: string) {
+    const [foodCart, comboCart] = await Promise.all([
+      this.buildCartSummaryByType(userId, 'FOOD'),
+      this.buildCartSummaryByType(userId, 'COMBO')
+    ])
+
+    return {
+      foodCart,
+      comboCart
     }
   }
 
@@ -119,7 +134,8 @@ class CartService {
 
     return {
       price: Number(food.price),
-      stock: Number(food.stock)
+      stock: Number(food.stock),
+      cartType: food.isCombo ? ('COMBO' as const) : ('FOOD' as const)
     }
   }
 
@@ -139,8 +155,24 @@ class CartService {
     }
   }
 
+  private async findCartContainingItem(userId: string, itemObjectId: ObjectId) {
+    const [foodCart, comboCart] = await Promise.all([
+      this.getOrCreateCart(userId, 'FOOD'),
+      this.getOrCreateCart(userId, 'COMBO')
+    ])
+
+    if (foodCart.items.some((item) => String(item.itemId) === String(itemObjectId))) {
+      return foodCart
+    }
+
+    if (comboCart.items.some((item) => String(item.itemId) === String(itemObjectId))) {
+      return comboCart
+    }
+
+    return null
+  }
+
   async addItem(userId: string, payload: { itemId: string; quantity: number }) {
-    const cart = await this.getOrCreateCart(userId)
     const itemObjectId = new ObjectId(payload.itemId)
     const quantity = Number(payload.quantity)
 
@@ -152,6 +184,7 @@ class CartService {
     }
 
     const purchasable = await this.ensurePurchasableFood(itemObjectId)
+    const cart = await this.getOrCreateCart(userId, purchasable.cartType)
 
     const existing = cart.items.find((item) => String(item.itemId) === String(itemObjectId))
 
@@ -179,12 +212,20 @@ class CartService {
       }
     )
 
-    return this.buildCartSummary(userId)
+    return this.buildCartSummaryByType(userId, cart.cartType)
   }
 
   async updateItemQuantity(userId: string, payload: { itemId: string; quantity: number }) {
-    const cart = await this.getOrCreateCart(userId)
     const itemObjectId = new ObjectId(payload.itemId)
+    const cart = await this.findCartContainingItem(userId, itemObjectId)
+
+    if (!cart) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.CART_ITEM_NOT_FOUND,
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
     const target = cart.items.find((item) => String(item.itemId) === String(itemObjectId))
 
     if (!target) {
@@ -213,11 +254,20 @@ class CartService {
       }
     )
 
-    return this.buildCartSummary(userId)
+    return this.buildCartSummaryByType(userId, cart.cartType)
   }
 
   async removeItem(userId: string, itemId: string) {
-    const cart = await this.getOrCreateCart(userId)
+    const itemObjectId = new ObjectId(itemId)
+    const cart = await this.findCartContainingItem(userId, itemObjectId)
+
+    if (!cart) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.CART_ITEM_NOT_FOUND,
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
     const before = cart.items.length
 
     cart.items = cart.items.filter((item) => String(item.itemId) !== itemId)
@@ -239,11 +289,11 @@ class CartService {
       }
     )
 
-    return this.buildCartSummary(userId)
+    return this.buildCartSummaryByType(userId, cart.cartType)
   }
 
-  async clearCart(userId: string) {
-    const cart = await this.getOrCreateCart(userId)
+  async clearCartByType(userId: string, cartType: CartTypeValue) {
+    const cart = await this.getOrCreateCart(userId, cartType)
 
     await databaseService.carts.updateOne(
       { _id: cart._id },
@@ -255,7 +305,19 @@ class CartService {
       }
     )
 
-    return this.buildCartSummary(userId)
+    return this.buildCartSummaryByType(userId, cartType)
+  }
+
+  async clearCart(userId: string) {
+    const [foodCart, comboCart] = await Promise.all([
+      this.clearCartByType(userId, 'FOOD'),
+      this.clearCartByType(userId, 'COMBO')
+    ])
+
+    return {
+      foodCart,
+      comboCart
+    }
   }
 
   async refreshCart(userId: string) {

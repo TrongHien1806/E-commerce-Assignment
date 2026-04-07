@@ -1,4 +1,5 @@
-import { PaymentMethod, PaymentStatus, OrderStatus, DeliveryMode } from '~/models/schemas/Order.schema'
+import { PackageType, PaymentMethod, PaymentStatus, OrderStatus } from '~/models/schemas/Order.schema'
+import { CartTypeValue } from '~/models/schemas/Cart.schema'
 
 export interface AddCartItemReqBody {
   itemId: string
@@ -11,11 +12,10 @@ export interface UpdateCartItemReqBody {
 
 export interface QuoteOrderReqBody {
   deliveryAddress: string
-  deliveryMode: DeliveryMode
-  deliveryDate?: string
-  deliveryDates?: string[]
+  deliveryDate: string
+  packageType?: PackageType
+  cartType?: CartTypeValue
   distanceKm?: number
-  deliveryDistancesKm?: number[]
   note?: string
   paymentMethod: PaymentMethod
 }

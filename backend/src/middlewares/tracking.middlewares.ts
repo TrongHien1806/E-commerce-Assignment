@@ -25,3 +25,36 @@ export const updateWeightValidator = validate(
     }
   })
 )
+
+export const addCaloriesValidator = validate(
+  checkSchema({
+    date: {
+      in: ['body'],
+      notEmpty: {
+        errorMessage: 'Ngày là bắt buộc'
+      },
+      isISO8601: {
+        errorMessage: 'Định dạng ngày không hợp lệ'
+      }
+    },
+    caloriesConsumed: {
+      in: ['body'],
+      notEmpty: {
+        errorMessage: 'Calories tiêu thụ là bắt buộc'
+      },
+      isFloat: {
+        options: { min: 0 },
+        errorMessage: 'Calories tiêu thụ phải là số không âm'
+      },
+      toFloat: true
+    },
+    note: {
+      in: ['body'],
+      optional: true,
+      isString: {
+        errorMessage: 'Ghi chú phải là chuỗi'
+      },
+      trim: true
+    }
+  })
+)

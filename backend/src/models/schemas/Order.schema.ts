@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb'
 export type OrderStatus = 'Pending' | 'Cooking' | 'Delivering' | 'Completed' | 'Cancelled'
 export type PaymentMethod = 'COD' | 'VNPay' | 'MoMo'
 export type PaymentStatus = 'Pending' | 'Paid' | 'Failed'
-export type DeliveryMode = 'WEEKLY_ONCE' | 'DAILY'
+export type PackageType = 'ONE_DAY' | 'WEEKLY_7D'
 export type CancelledBy = 'Customer' | 'Admin'
 
 export interface OrderItem {
@@ -31,7 +31,7 @@ export interface OrderType {
   _id?: ObjectId
   userId: ObjectId
   items: OrderItem[]
-  deliveryMode: DeliveryMode
+  packageType: PackageType
   deliverySchedule: Date[]
   shippingBreakdowns: ShippingBreakdown[]
   subtotal: number
@@ -51,7 +51,7 @@ export default class Order implements OrderType {
   _id?: ObjectId
   userId: ObjectId
   items: OrderItem[]
-  deliveryMode: DeliveryMode
+  packageType: PackageType
   deliverySchedule: Date[]
   shippingBreakdowns: ShippingBreakdown[]
   subtotal: number
@@ -69,7 +69,7 @@ export default class Order implements OrderType {
     this._id = order._id
     this.userId = order.userId
     this.items = order.items
-    this.deliveryMode = order.deliveryMode
+    this.packageType = order.packageType || 'ONE_DAY'
     this.deliverySchedule = order.deliverySchedule
     this.shippingBreakdowns = order.shippingBreakdowns
     this.subtotal = order.subtotal

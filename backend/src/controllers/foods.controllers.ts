@@ -17,6 +17,7 @@ type FoodListQuery = {
   maxPrice?: string
   minCalories?: string
   maxCalories?: string
+  isCombo?: string
   sortBy?: string
   order?: 'asc' | 'desc'
 }
