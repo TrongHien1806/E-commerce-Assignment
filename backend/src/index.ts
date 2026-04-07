@@ -14,10 +14,11 @@ import reviewsRouter from '~/routes/reviews.routes'
 config()
 // connect xong thì tạo index
 databaseService.connect().then(async () => {
-  // databaseService.indexUsers()
-  // databaseService.indexRefreshTokens()
-  // databaseService.indexCarts()
-  // databaseService.indexOrders()
+  await databaseService.indexUsers()
+  await databaseService.indexRefreshTokens()
+  await databaseService.indexCarts()
+  await databaseService.indexOrders()
+  await databaseService.indexCalorieLogs()
   // await autogenerateUsers()
   // await autogenerateTweets()
 })

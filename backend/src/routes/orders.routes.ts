@@ -27,9 +27,7 @@ const ordersRouter = Router()
  * Path: /quote
  * Method: POST
  * Header: { Authorization: Bearer <access_token> }
- * Body:
- *  - WEEKLY_ONCE: { deliveryAddress: string, deliveryMode: 'WEEKLY_ONCE', deliveryDate: string, distanceKm?: number, note?: string, paymentMethod: 'COD' | 'VNPay' | 'MoMo' }
- *  - DAILY (combo tuần): { deliveryAddress: string, deliveryMode: 'DAILY', deliveryDates: string[7], distanceKm?: number, deliveryDistancesKm?: number[7], note?: string, paymentMethod: 'COD' | 'VNPay' | 'MoMo' }
+ * Body: { deliveryAddress: string, deliveryDate: string, packageType?: 'ONE_DAY' | 'WEEKLY_7D', cartType?: 'FOOD' | 'COMBO', distanceKm?: number, note?: string, paymentMethod: 'COD' | 'VNPay' | 'MoMo' }
  */
 ordersRouter.post('/quote', accessTokenValidator, quoteOrderValidator, wrapRequestHandler(quoteOrderController))
 
@@ -38,7 +36,7 @@ ordersRouter.post('/quote', accessTokenValidator, quoteOrderValidator, wrapReque
  * Path: /
  * Method: POST
  * Header: { Authorization: Bearer <access_token> }
- * Body: Same as quote payload
+ * Body: Same as quote payload (cartType giúp chọn checkout từ giỏ FOOD/COMBO)
  */
 ordersRouter.post('/', accessTokenValidator, createOrderValidator, wrapRequestHandler(createOrderController))
 

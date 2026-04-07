@@ -1,8 +1,12 @@
 import { Router } from 'express'
 import {
   addCartItemController,
+  clearComboCartController,
   clearCartController,
+  clearFoodCartController,
+  getComboCartController,
   getCartController,
+  getFoodCartController,
   refreshCartController,
   removeCartItemController,
   updateCartItemQuantityController
@@ -24,6 +28,8 @@ const cartRouter = Router()
  * Header: { Authorization: Bearer <access_token> }
  */
 cartRouter.get('/', accessTokenValidator, wrapRequestHandler(getCartController))
+cartRouter.get('/food', accessTokenValidator, wrapRequestHandler(getFoodCartController))
+cartRouter.get('/combo', accessTokenValidator, wrapRequestHandler(getComboCartController))
 
 /**
  * Description. Add a food item into current user's cart
@@ -70,6 +76,8 @@ cartRouter.delete(
  * Header: { Authorization: Bearer <access_token> }
  */
 cartRouter.delete('/', accessTokenValidator, wrapRequestHandler(clearCartController))
+cartRouter.delete('/food', accessTokenValidator, wrapRequestHandler(clearFoodCartController))
+cartRouter.delete('/combo', accessTokenValidator, wrapRequestHandler(clearComboCartController))
 
 /**
  * Description. Refresh cart summary by latest food information

@@ -9,16 +9,20 @@ import {
   UpdateOrderStatusReqBody,
   UpdatePaymentStatusReqBody
 } from '~/models/requests/CartOrder.request'
-import Order, { OrderStatus, ShippingBreakdown } from '~/models/schemas/Order.schema'
+import Order, { OrderStatus, PackageType, ShippingBreakdown } from '~/models/schemas/Order.schema'
 import { UserRole } from '~/models/schemas/User.schema'
+import { CartTypeValue } from '~/models/schemas/Cart.schema'
 import cartService from '~/services/cart.services'
 import databaseService from '~/services/database.services'
+import trackingService from '~/services/tracking.services'
 
 const SHIPPING_BASE_FEE = 20000
 const SHIPPING_BASE_KM = 5
 const SHIPPING_EXTRA_PER_KM = 5000
 
 class OrdersService {
+  private readonly WEEKLY_PACKAGE_DAYS = 7
+
   private calculateShippingForDistance(distanceKm: number): ShippingBreakdown {
     const normalizedDistance = Math.max(0, distanceKm)
     const extraDistance = Math.max(0, normalizedDistance - SHIPPING_BASE_KM)
@@ -44,46 +48,16 @@ class OrdersService {
     return date
   }
 
-  private resolveDistances(payload: QuoteOrderReqBody, daysCount: number) {
-    if (payload.deliveryMode === 'WEEKLY_ONCE') {
-      return [Number(payload.distanceKm ?? 0)]
-    }
-
-    if (payload.deliveryDistancesKm?.length) {
-      if (payload.deliveryDistancesKm.length !== daysCount) {
-        throw new ErrorWithStatus({
-          message: USERS_MESSAGES.DAILY_DISTANCE_COUNT_MISMATCH,
-          status: HTTP_STATUS.BAD_REQUEST
-        })
-      }
-      return payload.deliveryDistancesKm.map((value) => Number(value || 0))
-    }
-
-    const fallbackDistance = Number(payload.distanceKm ?? 0)
-    return Array.from({ length: daysCount }).map(() => fallbackDistance)
-  }
-
-  private resolveDeliverySchedule(payload: QuoteOrderReqBody): Date[] {
-    if (payload.deliveryMode === 'WEEKLY_ONCE') {
-      if (!payload.deliveryDate) {
-        throw new ErrorWithStatus({
-          message: USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED,
-          status: HTTP_STATUS.BAD_REQUEST
-        })
-      }
-
-      return [this.toValidDate(payload.deliveryDate, USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED)]
-    }
-
-    const deliveryDates = payload.deliveryDates || []
-    if (deliveryDates.length !== 7) {
-      throw new ErrorWithStatus({
-        message: USERS_MESSAGES.DAILY_DELIVERY_DATES_MUST_BE_7,
-        status: HTTP_STATUS.BAD_REQUEST
+  private buildDeliverySchedule(startDate: Date, packageType: PackageType): Date[] {
+    if (packageType === 'WEEKLY_7D') {
+      return Array.from({ length: this.WEEKLY_PACKAGE_DAYS }).map((_, index) => {
+        const date = new Date(startDate)
+        date.setDate(startDate.getDate() + index)
+        return date
       })
     }
 
-    return deliveryDates.map((item) => this.toValidDate(item, USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY))
+    return [startDate]
   }
 
   private async getRequestUser(userId: string) {
@@ -102,8 +76,23 @@ class OrdersService {
     return user
   }
 
+  private resolveOrderCartType(payload: QuoteOrderReqBody): CartTypeValue {
+    const packageType: PackageType = payload.packageType || 'ONE_DAY'
+    const cartType: CartTypeValue = payload.cartType || (packageType === 'WEEKLY_7D' ? 'COMBO' : 'FOOD')
+
+    if (packageType === 'WEEKLY_7D' && cartType !== 'COMBO') {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.WEEKLY_PACKAGE_REQUIRES_COMBO_CART,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    return cartType
+  }
+
   async quoteOrder(userId: string, payload: QuoteOrderReqBody) {
-    const cart = await cartService.buildCartSummary(userId)
+    const cartType = this.resolveOrderCartType(payload)
+    const cart = await cartService.buildCartSummaryByType(userId, cartType)
     if (!cart.items.length) {
       throw new ErrorWithStatus({
         message: USERS_MESSAGES.CART_IS_EMPTY,
@@ -111,21 +100,14 @@ class OrdersService {
       })
     }
 
-    const schedule = this.resolveDeliverySchedule(payload)
-    const daysCount = schedule.length
-    const resolvedDistances = this.resolveDistances(payload, daysCount)
-
-    if (resolvedDistances.length !== schedule.length) {
-      throw new ErrorWithStatus({
-        message: USERS_MESSAGES.DELIVERY_SCHEDULE_DISTANCE_MISMATCH,
-        status: HTTP_STATUS.BAD_REQUEST
-      })
-    }
-
-    const shippingBreakdowns = resolvedDistances.map((distance) => this.calculateShippingForDistance(distance))
+    const packageType: PackageType = payload.packageType || 'ONE_DAY'
+    const deliveryDate = this.toValidDate(payload.deliveryDate, USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED)
+    const schedule = this.buildDeliverySchedule(deliveryDate, packageType)
+    const shippingBreakdown = this.calculateShippingForDistance(Number(payload.distanceKm ?? 0))
+    const shippingBreakdowns = schedule.map(() => shippingBreakdown)
     const shippingFee = shippingBreakdowns.reduce((sum, item) => sum + item.totalFee, 0)
-    const subtotal = cart.summary.subtotal * daysCount
-    const totalCalories = cart.summary.totalCalories * daysCount
+    const subtotal = cart.summary.subtotal * schedule.length
+    const totalCalories = cart.summary.totalCalories * schedule.length
 
     return {
       cart,
@@ -137,10 +119,11 @@ class OrdersService {
         totalCalories
       },
       delivery: {
-        mode: payload.deliveryMode,
         address: payload.deliveryAddress,
         schedule,
-        daysCount
+        daysCount: schedule.length,
+        packageType,
+        cartType
       },
       payment: {
         method: payload.paymentMethod
@@ -165,7 +148,7 @@ class OrdersService {
     const order = new Order({
       userId: new ObjectId(userId),
       items,
-      deliveryMode: payload.deliveryMode,
+      packageType: quote.delivery.packageType,
       deliverySchedule: quote.delivery.schedule,
       shippingBreakdowns: quote.pricing.shippingBreakdowns,
       subtotal: quote.pricing.subtotal,
@@ -181,7 +164,7 @@ class OrdersService {
     })
 
     const inserted = await databaseService.orders.insertOne(order)
-    await cartService.clearCart(userId)
+    await cartService.clearCartByType(userId, quote.delivery.cartType)
 
     return {
       orderId: inserted.insertedId,
@@ -320,6 +303,10 @@ class OrdersService {
         $currentDate: { updatedAt: true }
       }
     )
+
+    if (payload.status === 'Completed') {
+      await trackingService.recordOrderCalories(String(order.userId), order)
+    }
 
     return {
       message: USERS_MESSAGES.ORDER_STATUS_UPDATED_SUCCESS

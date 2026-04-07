@@ -3,7 +3,8 @@ import { USERS_MESSAGES } from '~/constants/messages'
 import { validate } from '~/utils/validation'
 
 const PAYMENT_METHODS = ['COD', 'VNPay', 'MoMo']
-const DELIVERY_MODES = ['WEEKLY_ONCE', 'DAILY']
+const PACKAGE_TYPES = ['ONE_DAY', 'WEEKLY_7D']
+const CART_TYPES = ['FOOD', 'COMBO']
 const PAYMENT_STATUSES = ['Pending', 'Paid', 'Failed']
 const ORDER_NEXT_STATUSES = ['Cooking', 'Delivering', 'Completed']
 
@@ -19,19 +20,26 @@ export const quoteOrderValidator = validate(
         },
         trim: true
       },
-      deliveryMode: {
+      deliveryDate: {
         notEmpty: {
-          errorMessage: USERS_MESSAGES.DELIVERY_MODE_IS_REQUIRED
+          errorMessage: USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED
         },
-        isIn: {
-          options: [DELIVERY_MODES],
-          errorMessage: USERS_MESSAGES.DELIVERY_MODE_IS_INVALID
+        isISO8601: {
+          errorMessage: USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED
         }
       },
-      deliveryDate: {
+      packageType: {
         optional: true,
-        isISO8601: {
-          errorMessage: USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY
+        isIn: {
+          options: [PACKAGE_TYPES],
+          errorMessage: USERS_MESSAGES.PACKAGE_TYPE_IS_INVALID
+        }
+      },
+      cartType: {
+        optional: true,
+        isIn: {
+          options: [CART_TYPES],
+          errorMessage: USERS_MESSAGES.CART_TYPE_IS_INVALID
         }
       },
       distanceKm: {
@@ -39,12 +47,6 @@ export const quoteOrderValidator = validate(
         isFloat: {
           options: { min: 0 },
           errorMessage: USERS_MESSAGES.DISTANCE_KM_MUST_BE_A_NON_NEGATIVE_NUMBER
-        }
-      },
-      deliveryDistancesKm: {
-        optional: true,
-        isArray: {
-          errorMessage: USERS_MESSAGES.DELIVERY_DISTANCES_MUST_BE_ARRAY
         }
       },
       paymentMethod: {
@@ -60,42 +62,6 @@ export const quoteOrderValidator = validate(
         optional: true,
         isString: {
           errorMessage: USERS_MESSAGES.NOTE_MUST_BE_A_STRING
-        }
-      },
-      deliveryDates: {
-        optional: true,
-        isArray: {
-          errorMessage: USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY
-        }
-      },
-      'deliveryDates.*': {
-        optional: true,
-        isISO8601: {
-          errorMessage: USERS_MESSAGES.DELIVERY_DATES_MUST_BE_ARRAY
-        }
-      },
-      _deliveryDateByMode: {
-        custom: {
-          options: (_value, { req }) => {
-            const mode = req.body?.deliveryMode
-            const deliveryDate = req.body?.deliveryDate
-            const deliveryDates = req.body?.deliveryDates
-
-            if (mode === 'WEEKLY_ONCE') {
-              if (!deliveryDate) {
-                throw new Error(USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED)
-              }
-              return true
-            }
-
-            if (mode === 'DAILY') {
-              if (!Array.isArray(deliveryDates) || deliveryDates.length !== 7) {
-                throw new Error(USERS_MESSAGES.DAILY_DELIVERY_DATES_MUST_BE_7)
-              }
-            }
-
-            return true
-          }
         }
       }
     },

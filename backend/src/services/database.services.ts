@@ -9,6 +9,7 @@ import Cart from '~/models/schemas/Cart.schema'
 import Review from '~/models/schemas/Review.schema'
 import ChatRoom from '~/models/schemas/ChatRoom.schema'
 import Analytics from '~/models/schemas/Analytic.schema'
+import CalorieLog from '~/models/schemas/CalorieLog.schema'
 
 config()
 
@@ -66,9 +67,14 @@ class DatabaseService {
   }
 
   async indexCarts() {
-    const exists = await this.carts.indexExists(['userId_1'])
+    const oldIndexExists = await this.carts.indexExists('userId_1')
+    if (oldIndexExists) {
+      await this.carts.dropIndex('userId_1')
+    }
+
+    const exists = await this.carts.indexExists('userId_1_cartType_1')
     if (!exists) {
-      this.carts.createIndex({ userId: 1 }, { unique: true })
+      await this.carts.createIndex({ userId: 1, cartType: 1 }, { unique: true })
     }
   }
 
@@ -77,6 +83,22 @@ class DatabaseService {
     if (!exists) {
       this.orders.createIndex({ userId: 1, createdAt: -1 })
       this.orders.createIndex({ status: 1, createdAt: -1 })
+    }
+  }
+
+  async indexCalorieLogs() {
+    const calorieLogsCollectionName = process.env.DB_CALORIE_LOGS_COLLECTION as string
+
+    const collectionExists = await this.db.listCollections({ name: calorieLogsCollectionName }).hasNext()
+
+    if (!collectionExists) {
+      await this.db.createCollection(calorieLogsCollectionName)
+    }
+
+    const exists = await this.calorieLogs.indexExists(['userId_1_date_-1', 'sourceType_1_sourceId_1'])
+    if (!exists) {
+      await this.calorieLogs.createIndex({ userId: 1, date: -1 })
+      await this.calorieLogs.createIndex({ userId: 1, sourceType: 1, sourceId: 1 })
     }
   }
 
@@ -114,6 +136,10 @@ class DatabaseService {
 
   get analytics(): Collection<Analytics> {
     return this.db.collection(process.env.DB_ANALYTICS_COLLECTION as string)
+  }
+
+  get calorieLogs(): Collection<CalorieLog> {
+    return this.db.collection(process.env.DB_CALORIE_LOGS_COLLECTION as string)
   }
 }
 

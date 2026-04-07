@@ -1,4 +1,4 @@
-import { ObjectId } from 'mongodb'
+import { Filter, ObjectId } from 'mongodb'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { ErrorWithStatus } from '~/models/Errors'
 import Food, { FoodType } from '~/models/schemas/Food.schema'
@@ -13,6 +13,7 @@ type GetFoodsQuery = {
   maxPrice?: string
   minCalories?: string
   maxCalories?: string
+  isCombo?: string
   sortBy?: string
   order?: 'asc' | 'desc'
 }
@@ -23,7 +24,7 @@ class FoodService {
     const limit = Math.max(1, Number(query.limit) || 10)
     const skip = (page - 1) * limit
 
-    const match: Record<string, any> = {
+    const match: Filter<Food> = {
       isActive: true
     }
 
@@ -45,6 +46,12 @@ class FoodService {
       if (tagsArray.length > 0) {
         match.tags = { $in: tagsArray }
       }
+    }
+
+    if (query.isCombo === 'true') {
+      match.isCombo = true
+    } else if (query.isCombo === 'false') {
+      match.isCombo = false
     }
 
     // Filter theo khoảng giá
@@ -134,6 +141,7 @@ class FoodService {
     const food = new Food({
       name: payload.name.trim(),
       description: payload.description.trim(),
+      details: payload.details?.trim() || '',
       images: payload.images,
       price: payload.price,
       calories: payload.calories,
@@ -148,7 +156,8 @@ class FoodService {
       })),
       tags: payload.tags.map((tag) => tag.trim()),
       stock: payload.stock,
-      isActive: payload.isActive ?? true
+      isActive: payload.isActive ?? true,
+      isCombo: payload.isCombo ?? false
     })
 
     const result = await databaseService.foods.insertOne(food)
