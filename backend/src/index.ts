@@ -10,6 +10,7 @@ import ptRouter from './routes/pt.routes'
 import foodsRouter from './routes/foods.routes'
 import trackingRouter from '~/routes/tracking.routes'
 import reviewsRouter from '~/routes/reviews.routes'
+import mediasRouter from './routes/medias.routes'
 
 config()
 // connect xong thì tạo index
@@ -42,7 +43,13 @@ app.use('/tracking', trackingRouter)
 app.use('/reviews', reviewsRouter)
 app.use('/orders', ordersRouter)
 
+// 1. Phải cấp quyền public thư mục 'uploads' thì Frontend mới xem được ảnh
+app.use('/uploads', express.static('uploads'));
+
+// 2. Đăng ký route medias
+app.use('/medias', mediasRouter);
+
 app.use(defaultErrorHandler)
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+  console.log(`Example app listening on http://localhost:${port}`)
 })
