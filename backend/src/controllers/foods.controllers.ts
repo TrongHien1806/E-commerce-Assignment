@@ -48,3 +48,21 @@ export const createFoodController = async (req: Request<ParamsDictionary, any, F
     result
   })
 }
+
+export const updateFoodController = async (req: Request<FoodParams, any, FoodType>, res: Response) => {
+  const { food_id } = req.params as FoodParams
+  // req.body đã được filter sạch sẽ qua updateFoodValidator
+  const result = await foodService.updateFood(food_id, req.body)
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: 'Cập nhật món ăn thành công',
+    result
+  })
+}
+
+export const deleteFoodController = async (req: Request, res: Response) => {
+  const { food_id } = req.params as FoodParams
+  const result = await foodService.deleteFood(food_id)
+
+  return res.status(HTTP_STATUS.OK).json(result)
+}

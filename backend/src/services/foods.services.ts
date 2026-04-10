@@ -167,6 +167,62 @@ class FoodService {
       ...food
     }
   }
+
+  async updateFood(food_id: string, payload: any) {
+    if (!ObjectId.isValid(food_id)) {
+      throw new ErrorWithStatus({
+        message: 'ID món ăn không hợp lệ',
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const updatedFood = await databaseService.foods.findOneAndUpdate(
+      { _id: new ObjectId(food_id) },
+      { 
+        $set: payload,
+        $currentDate: { updatedAt: true }
+      },
+      { returnDocument: 'after' } // Trả về data mới sau khi update
+    )
+
+    if (!updatedFood) {
+      throw new ErrorWithStatus({
+        message: 'Không tìm thấy món ăn',
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    return updatedFood
+  }
+
+  async deleteFood(food_id: string) {
+    if (!ObjectId.isValid(food_id)) {
+      throw new ErrorWithStatus({
+        message: 'ID món ăn không hợp lệ',
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const deletedFood = await databaseService.foods.findOneAndUpdate(
+      { _id: new ObjectId(food_id) },
+      {
+        $set: { isActive: false },
+        $currentDate: { updatedAt: true }
+      },
+      { returnDocument: 'after' }
+    )
+
+    if (!deletedFood) {
+      throw new ErrorWithStatus({
+        message: 'Không tìm thấy món ăn',
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    return {
+      message: 'Xóa (ẩn) món ăn thành công'
+    }
+  }
 }
 
 const foodService = new FoodService()
