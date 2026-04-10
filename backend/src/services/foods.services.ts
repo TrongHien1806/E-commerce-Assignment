@@ -19,13 +19,18 @@ type GetFoodsQuery = {
 }
 
 class FoodService {
-  async getFoods(query: GetFoodsQuery) {
+  async getFoods(query: GetFoodsQuery, isAdmin: boolean = false) {
     const page = Math.max(1, Number(query.page) || 1)
     const limit = Math.max(1, Number(query.limit) || 10)
     const skip = (page - 1) * limit
 
-    const match: Filter<Food> = {
-      isActive: true
+    // Khởi tạo object match rỗng
+    const match: Filter<Food> = {}
+
+    // THÊM ĐOẠN NÀY ĐỂ BẢO MẬT HIỂN THỊ:
+    // Nếu KHÔNG PHẢI Admin -> Bắt buộc chỉ lấy những món đang bán
+    if (!isAdmin) {
+      match.isActive = true
     }
 
     // Search theo tên món, không phân biệt hoa thường
