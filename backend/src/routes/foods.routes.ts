@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { createFoodController, getFoodDetailController, getFoodsController } from '~/controllers/foods.controllers'
 import { createFoodValidator, getFoodDetailValidator } from '~/middlewares/foods.middlewares'
-import { accessTokenValidator } from '~/middlewares/users.middlewares'
+import { accessTokenValidator, isAdminValidator } from '~/middlewares/users.middlewares'
 import { wrapRequestHandler } from '~/utils/handlers'
 
 const foodsRouter = Router()
@@ -30,5 +30,19 @@ foodsRouter.get('/:food_id', getFoodDetailValidator, wrapRequestHandler(getFoodD
  * Body: { name: string, description: string, category: string, price: number, calories: number, protein: number, carbs: number, fat: number, imageUrl?: string, stock?: number, isActive?: boolean }
  */
 foodsRouter.post('/', accessTokenValidator, createFoodValidator, wrapRequestHandler(createFoodController))
+
+/**
+ * Description. Create a new food item (CHỈ ADMIN MỚI ĐƯỢC TẠO)
+ * Path: /
+ * Method: POST
+ * Header: { Authorization: Bearer <access_token> }
+ */
+foodsRouter.post(
+  '/', 
+  accessTokenValidator, 
+  isAdminValidator, // Đặt trạm kiểm soát Admin ở đây
+  createFoodValidator, 
+  wrapRequestHandler(createFoodController)
+)
 
 export default foodsRouter
