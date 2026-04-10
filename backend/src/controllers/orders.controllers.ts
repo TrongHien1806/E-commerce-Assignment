@@ -38,6 +38,17 @@ export const createOrderController = async (
   })
 }
 
+export const getAllOrdersController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  
+  const result = await ordersService.getAllOrders(decoded_authorization.user_id)
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: 'Lấy danh sách tất cả đơn hàng thành công',
+    result
+  })
+}
+
 export const getMyOrdersController = async (req: Request, res: Response) => {
   const decoded = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
   const result = await ordersService.getMyOrders(decoded.user_id)
