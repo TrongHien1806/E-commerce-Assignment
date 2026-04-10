@@ -4,6 +4,7 @@ import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
 import Review, { ReviewTargetType } from '~/models/schemas/Review.schema'
 import databaseService from './database.services'
+import { UserRole, AccountStatus } from '~/models/schemas/User.schema'
 
 type CreateReviewPayload = {
   targetType: ReviewTargetType
@@ -38,8 +39,8 @@ class ReviewService {
     } else {
       const pt = await databaseService.users.findOne({
         _id: targetObjectId,
-        role: 'PT',
-        account_status: 'Active'
+        role: 'PT' as UserRole,
+        account_status: 'Active' as AccountStatus
       })
       if (!pt) {
         throw new ErrorWithStatus({
@@ -52,11 +53,10 @@ class ReviewService {
     // 2) Check verified purchase
     const completedOrder = await databaseService.orders.findOne({
       userId: new ObjectId(reviewerId),
-      status: 'Completed',
+      status: 'Completed', // Trạng thái đơn hàng phải là Completed
       items: {
         $elemMatch: {
-          itemType: targetType === 'Food' ? 'Food' : 'PTService',
-          itemId: targetObjectId
+          itemId: targetObjectId // Đã xóa dòng itemType đi
         }
       }
     })
@@ -115,6 +115,85 @@ class ReviewService {
       })
       .sort({ createdAt: -1 })
       .toArray()
+  }
+
+  // Thêm 2 hàm này vào bên trong class ReviewService (backend/src/services/reviews.services.ts)
+
+  async updateReview(userId: string, reviewId: string, payload: Partial<CreateReviewPayload>) {
+    // 1. Tìm đánh giá
+    const review = await databaseService.reviews.findOne({ _id: new ObjectId(reviewId) })
+    
+    if (!review) {
+      throw new ErrorWithStatus({
+        message: 'Không tìm thấy đánh giá này',
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    // 2. Kiểm tra quyền sở hữu (Chỉ người viết mới được sửa)
+    if (review.reviewerId.toString() !== userId) {
+      throw new ErrorWithStatus({
+        message: 'Bạn không có quyền sửa đánh giá của người khác',
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
+    // 3. Logic 7 ngày: Kiểm tra xem đã quá 7 ngày kể từ lúc tạo chưa
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - (review.createdAt?.getTime() || now.getTime()))
+    const diffDays = diffTime / (1000 * 60 * 60 * 24)
+
+    if (diffDays > 7) {
+      throw new ErrorWithStatus({
+        message: 'Đã quá 7 ngày kể từ lúc viết, bạn không thể chỉnh sửa đánh giá này nữa',
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    // 4. Cập nhật dữ liệu
+    const updateData: any = {}
+    if (payload.rating !== undefined) updateData.rating = payload.rating
+    if (payload.comment !== undefined) updateData.comment = payload.comment
+    if (payload.images !== undefined) updateData.images = payload.images
+
+    await databaseService.reviews.updateOne(
+      { _id: new ObjectId(reviewId) },
+      { $set: updateData }
+    )
+
+    return {
+      message: 'Cập nhật đánh giá thành công'
+    }
+  }
+
+async deleteReview(userId: string, reviewId: string) {
+    // 1. Tìm đánh giá xem có tồn tại không
+    const review = await databaseService.reviews.findOne({ _id: new ObjectId(reviewId) })
+    
+    if (!review) {
+      throw new ErrorWithStatus({
+        message: 'Không tìm thấy đánh giá này',
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    // 2. Tìm thông tin User đang thực hiện request để check Role
+    const user = await databaseService.users.findOne({ _id: new ObjectId(userId) })
+    
+    // 3. Kiểm tra quyền: CHỈ ADMIN MỚI ĐƯỢC XÓA
+    if (!user || user.role !== UserRole.ADMIN) {
+      throw new ErrorWithStatus({
+        message: 'Chỉ có Quản trị viên (Admin) mới có quyền xóa đánh giá',
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
+    // 4. Thực hiện xóa
+    await databaseService.reviews.deleteOne({ _id: new ObjectId(reviewId) })
+
+    return {
+      message: 'Xóa đánh giá thành công (Dành cho Admin)'
+    }
   }
 }
 

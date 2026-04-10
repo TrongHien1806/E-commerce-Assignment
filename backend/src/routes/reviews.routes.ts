@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { createReviewController, getReviewsController } from '~/controllers/reviews.controllers'
-import { createReviewValidator, getReviewsValidator } from '~/middlewares/reviews.middlewares'
+import { createReviewController, deleteReviewController, getReviewsController, updateReviewController } from '~/controllers/reviews.controllers'
+import { createReviewValidator, getReviewsValidator, reviewIdParamValidator, updateReviewValidator } from '~/middlewares/reviews.middlewares'
 import { accessTokenValidator } from '~/middlewares/users.middlewares'
 import { wrapRequestHandler } from '~/utils/handlers'
 
@@ -31,5 +31,33 @@ reviewsRouter.post('/', accessTokenValidator, createReviewValidator, wrapRequest
  * }
  */
 reviewsRouter.get('/:targetType/:targetId', getReviewsValidator, wrapRequestHandler(getReviewsController))
+
+/**
+ * Description. Update an existing review
+ * Path: /:review_id
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ * Body: { rating?: number, comment?: string, images?: string[] }
+ */
+reviewsRouter.patch(
+  '/:review_id',
+  accessTokenValidator,
+  reviewIdParamValidator,
+  updateReviewValidator,
+  wrapRequestHandler(updateReviewController)
+)
+
+/**
+ * Description. Delete a review
+ * Path: /:review_id
+ * Method: DELETE
+ * Header: { Authorization: Bearer <access_token> }
+ */
+reviewsRouter.delete(
+  '/:review_id',
+  accessTokenValidator,
+  reviewIdParamValidator,
+  wrapRequestHandler(deleteReviewController)
+)
 
 export default reviewsRouter
