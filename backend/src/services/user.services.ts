@@ -582,6 +582,16 @@ class UsersService {
     return user
   }
 
+  async getAllUsers() {
+    return databaseService.users
+      .find(
+        {}, 
+        { projection: { password: 0, forgot_password_token: 0 } } // Không trả về mật khẩu
+      )
+      .sort({ created_at: -1 })
+      .toArray()
+  }
+
   async updateMe(user_id: string, payload: UpdateMeReqBody) {
     const safePayload: { username?: string; phone?: string; date_of_birth?: Date } = {}
 
@@ -670,6 +680,38 @@ class UsersService {
     )
 
     return updatedUser
+  }
+
+  async updateUserStatus(targetUserId: string, status: AccountStatus) {
+    const targetObjectId = new ObjectId(targetUserId)
+
+    const user = await databaseService.users.findOne({ _id: targetObjectId })
+    if (!user) {
+      throw new ErrorWithStatus({
+        message: 'Không tìm thấy người dùng này',
+        status: HTTP_STATUS.NOT_FOUND
+      })
+    }
+
+    // Không cho phép Admin tự khóa chính mình
+    if (user.role === UserRole.ADMIN && status === AccountStatus.LOCKED) {
+      throw new ErrorWithStatus({
+        message: 'Không thể khóa tài khoản Admin',
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    await databaseService.users.updateOne(
+      { _id: targetObjectId },
+      { 
+        $set: { account_status: status }, 
+        $currentDate: { updated_at: true } 
+      }
+    )
+
+    return {
+      message: `Cập nhật trạng thái tài khoản thành ${status} thành công`
+    }
   }
 
   async registerPTService(user_id: string, service_id: string) {

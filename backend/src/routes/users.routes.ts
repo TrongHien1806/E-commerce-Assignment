@@ -14,7 +14,8 @@ import {
   ptServiceIdParamValidator,
   swapMealRecommendationValidator,
   updateMeValidator,
-  updatePTProfileValidator
+  updatePTProfileValidator,
+  isAdminValidator
 } from '~/middlewares/users.middlewares'
 import {
   checkEmailExistController,
@@ -34,7 +35,9 @@ import {
   resetPasswordController,
   swapMealRecommendationController,
   updateMeController,
-  updatePTProfileController
+  updatePTProfileController,
+  updateUserStatusController,
+  getAllUsersController
 } from '~/controllers/users.controllers'
 import { wrapRequestHandler } from '~/utils/handlers'
 
@@ -158,6 +161,33 @@ usersRouter.post(
  * Header: { Authorization: Bearer <access_token> }
  */
 usersRouter.get('/me/pt-services', accessTokenValidator, wrapRequestHandler(getMyRegisteredPTServicesController))
+
+/**
+ * Description. Get ALL users (Admin only)
+ * Path: /
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ */
+usersRouter.get(
+  '/',
+  accessTokenValidator,
+  isAdminValidator, // Chỉ Admin mới được xem
+  wrapRequestHandler(getAllUsersController)
+)
+
+/**
+ * Description. Update user account status (Ban / Unban)
+ * Path: /:user_id/status
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ * Body: { status: 'Active' | 'Banned' }
+ */
+usersRouter.patch(
+  '/:user_id/status',
+  accessTokenValidator,
+  isAdminValidator, // Chỉ Admin mới được khóa tài khoản
+  wrapRequestHandler(updateUserStatusController)
+)
 
 /**
  * Description. Intake or update health profile and auto-calculate metrics

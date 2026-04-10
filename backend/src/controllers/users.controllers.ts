@@ -139,6 +139,14 @@ export const getMeController = async (req: Request, res: Response) => {
   })
 }
 
+export const getAllUsersController = async (req: Request, res: Response) => {
+  const result = await usersService.getAllUsers()
+  return res.status(HTTP_STATUS.OK).json({
+    message: 'Lấy danh sách người dùng thành công',
+    result
+  })
+}
+
 export const updateMeController = async (
   req: Request<ParamsDictionary, Record<string, never>, UpdateMeReqBody>,
   res: Response
@@ -161,6 +169,14 @@ export const updatePTProfileController = async (
     message: USERS_MESSAGES.PT_PROFILE_UPDATED_SUCCESS,
     result
   })
+}
+
+export const updateUserStatusController = async (req: Request, res: Response) => {
+  const { user_id } = req.params as { user_id: string }
+  const { status } = req.body
+
+  const result = await usersService.updateUserStatus(user_id, status)
+  return res.status(HTTP_STATUS.OK).json(result)
 }
 
 export const registerPTServiceController = async (req: Request<{ service_id: string }>, res: Response) => {
