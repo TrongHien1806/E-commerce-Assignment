@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  checkInClientController,
   createPTServiceController,
   deletePTServiceController,
   getPTClientsController,
@@ -89,6 +90,18 @@ ptRouter.get(
   '/clients',
   accessTokenValidator, // Bắt buộc phải đăng nhập
   wrapRequestHandler(getPTClientsController)
+)
+
+/**
+ * Description. Check-in (deduct 1 session) for a client
+ * Path: /clients/:client_id/services/:service_id/check-in
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.patch(
+  '/clients/:client_id/services/:service_id/check-in',
+  accessTokenValidator,
+  wrapRequestHandler(checkInClientController)
 )
 
 export default ptRouter

@@ -306,6 +306,50 @@ class PTServiceLayer {
 
     return clients
   }
+
+  async checkInClientSession(pt_user_id: string, client_id: string, service_id: string) {
+    if (!ObjectId.isValid(client_id) || !ObjectId.isValid(service_id)) {
+      throw new ErrorWithStatus({ message: 'ID không hợp lệ', status: HTTP_STATUS.BAD_REQUEST })
+    }
+
+    const clientObjectId = new ObjectId(client_id)
+    const serviceObjectId = new ObjectId(service_id)
+
+    // 1. Kiểm tra gói dịch vụ này có phải của PT này không
+    const service = await databaseService.ptServices.findOne({ _id: serviceObjectId, ptId: new ObjectId(pt_user_id) })
+    if (!service) {
+      throw new ErrorWithStatus({ message: 'Bạn không có quyền thao tác trên gói dịch vụ này', status: HTTP_STATUS.FORBIDDEN })
+    }
+
+    // 2. Tìm khách hàng và lấy thông tin gói họ đang đăng ký
+    const client = await databaseService.users.findOne({ _id: clientObjectId })
+    const registration = client?.registeredPTServices?.find(
+      (reg: any) => reg.serviceId.toString() === service_id
+    ) as any
+
+    if (!registration) {
+      throw new ErrorWithStatus({ message: 'Học viên chưa đăng ký gói tập này', status: HTTP_STATUS.BAD_REQUEST })
+    }
+
+    if (registration.remainingSessions <= 0) {
+      throw new ErrorWithStatus({ message: 'Gói tập này đã hết số buổi', status: HTTP_STATUS.BAD_REQUEST })
+    }
+
+    // 3. Thực hiện trừ đi 1 buổi
+    await databaseService.users.updateOne(
+      { 
+        _id: clientObjectId, 
+        'registeredPTServices.serviceId': serviceObjectId 
+      },
+      {
+        $inc: { 'registeredPTServices.$.remainingSessions': -1 }
+      }
+    )
+
+    return {
+      message: `Check-in thành công. Học viên còn ${registration.remainingSessions - 1} buổi.`
+    }
+  }
 }
 
 const ptService = new PTServiceLayer()

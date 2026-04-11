@@ -779,12 +779,15 @@ class UsersService {
     await databaseService.users.updateOne(
       { _id: new ObjectId(user_id) },
       {
-        $addToSet: {
-          registeredPTServices: ptService._id
+        $push: {
+          registeredPTServices: {
+            serviceId: ptService._id,
+            remainingSessions: ptService.sessions, // Gán số buổi ban đầu
+            totalSessions: ptService.sessions,
+            registeredAt: new Date()
+          } as any // Ép kiểu tạm nếu schema TS báo lỗi
         },
-        $currentDate: {
-          updated_at: true
-        }
+        $currentDate: { updated_at: true }
       }
     )
 
