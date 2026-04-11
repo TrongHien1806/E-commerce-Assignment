@@ -288,7 +288,12 @@ class PTServiceLayer {
     // 3. Tìm các User có ID gói tập của PT nằm trong mảng registeredPTServices
     const clients = await databaseService.users
       .find(
-        { registeredPTServices: { $in: myServiceIds } },
+        { 
+          $or: [
+            { registeredPTServices: { $in: myServiceIds } }, // Bắt form cũ
+            { 'registeredPTServices.serviceId': { $in: myServiceIds } } // Bắt form mới chứa Object
+          ]
+        },
         { 
           projection: { 
             password: 0, 
@@ -298,7 +303,6 @@ class PTServiceLayer {
             notifications: 0,
             weightTracking: 0,
             calorieTracking: 0 
-            // Ẩn đi các thông tin nhạy cảm/không cần thiết, chỉ lấy Profile cơ bản
           } 
         }
       )

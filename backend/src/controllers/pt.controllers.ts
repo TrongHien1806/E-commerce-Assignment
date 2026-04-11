@@ -104,8 +104,8 @@ export const getPTClientsController = async (req: Request, res: Response) => {
 
 export const checkInClientController = async (req: Request, res: Response) => {
   const decoded_authorization = (req as unknown as { decoded_authorization: any }).decoded_authorization
-  const { client_id } = req.params as { client_id: string }
-  const { service_id } = req.body as { service_id: string }
+  
+  const { client_id, service_id } = req.params as { client_id: string, service_id: string }
 
   const result = await ptService.checkInClientSession(decoded_authorization.user_id, client_id, service_id)
   return res.status(HTTP_STATUS.OK).json(result)
