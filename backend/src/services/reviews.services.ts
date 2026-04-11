@@ -50,20 +50,48 @@ class ReviewService {
       }
     }
 
-    // 2) Check verified purchase
-    const completedOrder = await databaseService.orders.findOne({
-      userId: new ObjectId(reviewerId),
-      status: 'Completed', // Trạng thái đơn hàng phải là Completed
-      items: {
-        $elemMatch: {
-          itemId: targetObjectId // Đã xóa dòng itemType đi
-        }
-      }
-    })
+    // 2) Check verified purchase (Đã mua hàng/Đã đăng ký dịch vụ chưa?)
+    let isVerified = false
 
-    if (!completedOrder) {
+    if (targetType === 'Food') {
+      // Đối với Food: Tìm xem có đơn hàng Completed nào chứa món ăn này không
+      const completedOrder = await databaseService.orders.findOne({
+        userId: new ObjectId(reviewerId),
+        status: 'Completed',
+        items: {
+          $elemMatch: {
+            itemId: targetObjectId
+          }
+        }
+      })
+      if (completedOrder) isVerified = true
+    } else if (targetType === 'PT') {
+      // Đối với PT: Kiểm tra xem user này có đang học gói nào của PT này không
+      const user = await databaseService.users.findOne({ _id: new ObjectId(reviewerId) })
+      
+      // Lấy danh sách ID các gói tập user đã mua (hỗ trợ cả dữ liệu cũ dạng chuỗi và dữ liệu mới dạng Object)
+      const registeredServiceIds = (user?.registeredPTServices || []).map((reg: any) => {
+        if (reg && typeof reg === 'object' && reg.serviceId) {
+          return new ObjectId(reg.serviceId)
+        }
+        return new ObjectId(reg)
+      })
+
+      if (registeredServiceIds.length > 0) {
+        // Kiểm tra xem trong các gói tập user đã mua, có gói nào thuộc về PT đang được đánh giá (targetObjectId) không
+        const matchingService = await databaseService.ptServices.findOne({
+          _id: { $in: registeredServiceIds },
+          ptId: targetObjectId
+        })
+        
+        if (matchingService) isVerified = true
+      }
+    }
+
+    // Nếu chưa từng mua Food hoặc chưa từng đăng ký PT này -> Chặn không cho đánh giá
+    if (!isVerified) {
       throw new ErrorWithStatus({
-        message: USERS_MESSAGES.REVIEW_FORBIDDEN,
+        message: 'Bạn chỉ có thể đánh giá khi đã mua hoặc sử dụng dịch vụ',
         status: HTTP_STATUS.FORBIDDEN
       })
     }
