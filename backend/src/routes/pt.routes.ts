@@ -1,10 +1,15 @@
 import { Router } from 'express'
 import {
+  checkInClientController,
   createPTServiceController,
+  deletePTServiceController,
+  getPTClientsController,
   getPTServiceDetailController,
   getPTServiceListController,
-  getPTUserByUsernameController
+  getPTUserByUsernameController,
+  updatePTServiceController
 } from '~/controllers/pt.controllers'
+import { getPTServiceDetailValidator, updatePTServiceValidator } from '~/middlewares/pt.middlewares'
 import { accessTokenValidator } from '~/middlewares/users.middlewares'
 import { wrapRequestHandler } from '~/utils/handlers'
 
@@ -45,5 +50,58 @@ ptRouter.post('/services', accessTokenValidator, wrapRequestHandler(createPTServ
  * Query: { username: string }
  */
 ptRouter.get('/debug/user-by-username', wrapRequestHandler(getPTUserByUsernameController))
+
+/**
+ * Description. Update a PT service package
+ * Path: /services/:service_id
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.patch(
+  '/services/:service_id',
+  accessTokenValidator, // Bắt buộc đăng nhập
+  getPTServiceDetailValidator, // Check param ID
+  updatePTServiceValidator, // Check dữ liệu gửi lên
+  wrapRequestHandler(updatePTServiceController)
+)
+
+/**
+ * Description. Delete (Soft delete) a PT service package
+ * Path: /services/:service_id
+ * Method: DELETE
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.delete(
+  '/services/:service_id',
+  accessTokenValidator,
+  getPTServiceDetailValidator,
+  wrapRequestHandler(deletePTServiceController)
+)
+
+// Trong file backend/src/routes/pt.routes.ts
+
+/**
+ * Description. Get list of clients who registered current PT's services (PT Dashboard)
+ * Path: /clients
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.get(
+  '/clients',
+  accessTokenValidator, // Bắt buộc phải đăng nhập
+  wrapRequestHandler(getPTClientsController)
+)
+
+/**
+ * Description. Check-in (deduct 1 session) for a client
+ * Path: /clients/:client_id/services/:service_id/check-in
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.patch(
+  '/clients/:client_id/services/:service_id/check-in',
+  accessTokenValidator,
+  wrapRequestHandler(checkInClientController)
+)
 
 export default ptRouter

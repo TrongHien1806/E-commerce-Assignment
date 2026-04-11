@@ -611,3 +611,27 @@ export const debugValidator = (req: Request, res: Response, next: NextFunction) 
   console.log('Debug Validator - Request Headers:', req.headers)
   next()
 }
+
+export const isAdminValidator = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+    
+    // Tìm user trong database dựa vào user_id lấy từ token
+    const user = await databaseService.users.findOne({ 
+      _id: new ObjectId(decoded_authorization.user_id) 
+    })
+
+    // Kiểm tra Role
+    if (!user || user.role !== UserRole.ADMIN) {
+      return next(new ErrorWithStatus({
+        message: 'Chỉ có Quản trị viên (Admin) mới được phép thực hiện hành động này',
+        status: HTTP_STATUS.FORBIDDEN
+      }))
+    }
+
+    // Nếu đúng là Admin thì cho phép đi tiếp
+    next()
+  } catch (error) {
+    next(error)
+  }
+}

@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import { createFoodController, getFoodDetailController, getFoodsController } from '~/controllers/foods.controllers'
-import { createFoodValidator, getFoodDetailValidator } from '~/middlewares/foods.middlewares'
-import { accessTokenValidator } from '~/middlewares/users.middlewares'
+import { createFoodController, deleteFoodController, getFoodDetailController, getFoodsController, updateFoodController } from '~/controllers/foods.controllers'
+import { createFoodValidator, getFoodDetailValidator, updateFoodValidator } from '~/middlewares/foods.middlewares'
+import { accessTokenValidator, isAdminValidator } from '~/middlewares/users.middlewares'
 import { wrapRequestHandler } from '~/utils/handlers'
 
 const foodsRouter = Router()
@@ -23,12 +23,46 @@ foodsRouter.get('/', wrapRequestHandler(getFoodsController))
 foodsRouter.get('/:food_id', getFoodDetailValidator, wrapRequestHandler(getFoodDetailController))
 
 /**
- * Description. Create a new food item
+ * Description. Create a new food item (CHỈ ADMIN MỚI ĐƯỢC TẠO)
  * Path: /
  * Method: POST
  * Header: { Authorization: Bearer <access_token> }
- * Body: { name: string, description: string, category: string, price: number, calories: number, protein: number, carbs: number, fat: number, imageUrl?: string, stock?: number, isActive?: boolean }
  */
-foodsRouter.post('/', accessTokenValidator, createFoodValidator, wrapRequestHandler(createFoodController))
+foodsRouter.post(
+  '/', 
+  accessTokenValidator, 
+  isAdminValidator, // Đặt trạm kiểm soát Admin ở đây
+  createFoodValidator, 
+  wrapRequestHandler(createFoodController)
+)
+
+/**
+ * Description. Update a food item (Admin only)
+ * Path: /:food_id
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ */
+foodsRouter.patch(
+  '/:food_id',
+  accessTokenValidator,
+  isAdminValidator, // Chặn quyền Admin
+  getFoodDetailValidator, // Check id hợp lệ
+  updateFoodValidator, // Check body truyền lên
+  wrapRequestHandler(updateFoodController)
+)
+
+/**
+ * Description. Delete (Soft delete) a food item (Admin only)
+ * Path: /:food_id
+ * Method: DELETE
+ * Header: { Authorization: Bearer <access_token> }
+ */
+foodsRouter.delete(
+  '/:food_id',
+  accessTokenValidator,
+  isAdminValidator, // Chặn quyền Admin
+  getFoodDetailValidator, // Check id hợp lệ
+  wrapRequestHandler(deleteFoodController)
+)
 
 export default foodsRouter

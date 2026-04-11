@@ -261,6 +261,16 @@ class OrdersService {
     }
   }
 
+  // Admin lấy toàn bộ đơn hàng
+  async getAllOrders(adminUserId: string) {
+    // 1. Kiểm tra xem người gọi API có phải Admin không
+    const admin = await this.getRequestUser(adminUserId)
+    this.assertAdmin(admin.role)
+
+    // 2. Lấy toàn bộ đơn hàng, sắp xếp mới nhất lên đầu
+    return databaseService.orders.find({}).sort({ createdAt: -1 }).toArray()
+  }
+
   private canTransition(current: OrderStatus, next: Exclude<OrderStatus, 'Pending' | 'Cancelled'>) {
     if (current === 'Pending' && next === 'Cooking') return true
     if (current === 'Cooking' && next === 'Delivering') return true
@@ -379,6 +389,7 @@ class OrdersService {
       statusKept: order.status
     }
   }
+
 }
 
 const ordersService = new OrdersService()

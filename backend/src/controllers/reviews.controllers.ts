@@ -28,3 +28,21 @@ export const getReviewsController = async (req: Request<ReviewParams>, res: Resp
     result
   })
 }
+
+export const updateReviewController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const { review_id } = req.params as { review_id: string }
+
+  const result = await reviewService.updateReview(decoded_authorization.user_id, review_id, req.body)
+
+  return res.status(HTTP_STATUS.OK).json(result)
+}
+
+export const deleteReviewController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const { review_id } = req.params as { review_id: string }
+
+  const result = await reviewService.deleteReview(decoded_authorization.user_id, review_id)
+
+  return res.status(HTTP_STATUS.OK).json(result)
+}

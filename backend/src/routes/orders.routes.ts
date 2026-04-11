@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   cancelOrderController,
   createOrderController,
+  getAllOrdersController,
   getMyOrderDetailController,
   getMyOrdersController,
   quoteOrderController,
@@ -39,6 +40,14 @@ ordersRouter.post('/quote', accessTokenValidator, quoteOrderValidator, wrapReque
  * Body: Same as quote payload (cartType giúp chọn checkout từ giỏ FOOD/COMBO)
  */
 ordersRouter.post('/', accessTokenValidator, createOrderValidator, wrapRequestHandler(createOrderController))
+
+/**
+ * Description. Get ALL orders in the system (Admin only)
+ * Path: /all
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ordersRouter.get('/all', accessTokenValidator, wrapRequestHandler(getAllOrdersController))
 
 /**
  * Description. Get all orders of current user

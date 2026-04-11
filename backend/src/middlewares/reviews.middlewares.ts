@@ -96,3 +96,59 @@ export const getReviewsValidator = validate(
     }
   })
 )
+
+export const reviewIdParamValidator = validate(
+  checkSchema({
+    review_id: {
+      in: ['params'],
+      notEmpty: {
+        errorMessage: 'Review ID là bắt buộc'
+      },
+      custom: {
+        options: (value) => {
+          if (!ObjectId.isValid(value)) {
+            throw new Error('Review ID không hợp lệ')
+          }
+          return true
+        }
+      }
+    }
+  })
+)
+
+export const updateReviewValidator = validate(
+  checkSchema({
+    rating: {
+      in: ['body'],
+      optional: true,
+      isInt: {
+        options: { min: 1, max: 5 },
+        errorMessage: USERS_MESSAGES.RATING_INVALID
+      },
+      toInt: true
+    },
+    comment: {
+      in: ['body'],
+      optional: true,
+      isString: {
+        errorMessage: USERS_MESSAGES.COMMENT_REQUIRED
+      },
+      trim: true
+    },
+    images: {
+      in: ['body'],
+      optional: true,
+      isArray: {
+        errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+      }
+    },
+    'images.*': {
+      in: ['body'],
+      optional: true,
+      isString: {
+        errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+      },
+      trim: true
+    }
+  })
+)
