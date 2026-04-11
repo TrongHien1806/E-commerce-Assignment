@@ -42,7 +42,6 @@ app.use('/pt', ptRouter)
 app.use('/foods', foodsRouter)
 app.use('/tracking', trackingRouter)
 app.use('/reviews', reviewsRouter)
-app.use('/orders', ordersRouter)
 
 // 1. Phải cấp quyền public thư mục 'uploads' thì Frontend mới xem được ảnh
 app.use('/uploads', express.static('uploads'));

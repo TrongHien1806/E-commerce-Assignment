@@ -1,22 +1,24 @@
-// File: src/controllers/medias.controllers.ts
-import { Request, Response } from 'express';
-import HTTP_STATUS from '../constants/httpStatus';
+import { Request, Response } from 'express'
+import mediasService from '~/services/medias.services'
+import HTTP_STATUS from '~/constants/httpStatus'
 
 export const uploadImageController = async (req: Request, res: Response) => {
-    // req.file sẽ được multer tự động thêm vào sau khi xử lý xong
-    if (!req.file) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
-            message: 'Không tìm thấy file tải lên' 
-        });
-    }
+  // THÊM 2 DÒNG NÀY ĐỂ SOI XEM REQUEST CÓ GÌ
+  // console.log("File nhận được:", req.file);
+  // console.log("Body nhận được:", req.body);
+  
+    // Multer sẽ đính kèm file vào req.file
+  if (!req.file) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      message: 'Không tìm thấy file ảnh. Vui lòng gửi qua form-data với key là "image"'
+    })
+  }
 
-    const host = process.env.HOST_URL || `http://localhost:${process.env.PORT || 4000}`;
-    
-    // Tạo link để Frontend có thể truy cập ảnh (ví dụ: http://localhost:4000/uploads/image-1234.jpg)
-    const imageUrl = `${host}/uploads/${req.file.filename}`;
+  // Lấy đường dẫn file tạm và ném vào service
+  const imageUrl = await mediasService.uploadImage(req.file.path)
 
-    return res.status(HTTP_STATUS.OK).json({
-        message: 'Upload hình ảnh thành công',
-        result: imageUrl
-    });
-};
+  return res.status(HTTP_STATUS.OK).json({
+    message: 'Upload ảnh thành công',
+    result: [imageUrl] // Trả về mảng như trong API Spec của bạn
+  })
+}
