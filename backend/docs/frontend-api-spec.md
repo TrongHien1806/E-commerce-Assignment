@@ -118,6 +118,8 @@ Response:
   }  
 }
 ```
+- Admin hiện tại đang có 1 tài khoản là 
+- username: admin_root - password: Admin123456
 
 ### **POST /users/logout (Auth)**
 

@@ -15,7 +15,7 @@ export interface FoodType {
   _id?: ObjectId
   name: string
   description: string
-  details: string
+  details?: string
   images: string[]
   price: number
   calories: number
@@ -24,7 +24,7 @@ export interface FoodType {
   tags: string[] // ["Vegan", "GlutenFree"]
   stock: number
   isActive: boolean
-  isCombo: boolean
+  isCombo?: boolean
   createdAt?: Date
   updatedAt?: Date
 }
