@@ -125,6 +125,8 @@ Response:
   }
 }
 ```
+- Admin hiện tại đang có 1 tài khoản là 
+- username: admin_root - password: Admin123456
 
 ## POST `/users/logout` (Auth)
 Body:
@@ -422,7 +424,9 @@ Response:
   }
 }
 ```
-
+```
+Front-end hiện thực GET /cart/food + GET /cart/combo là được rồi
+```
 ## GET `/cart/food`
 Trả riêng giỏ `FOOD`.
 
@@ -515,8 +519,9 @@ Body:
 ```
 - Chỉ Admin.
 - Luồng hợp lệ: `Pending -> Cooking -> Delivering -> Completed`.
-
+- Admin phải cập nhật lần lượt đúng theo trình tự trạng thái.
 ## POST `/orders/:orderId/payments/retry`
+API này hiện tại có thể chưa cần hiện thực bên frontend, payment để cơ bản thì hiện tại đang hỗ trợ COD thôi.
 Body:
 ```json
 { "paymentMethod": "MoMo" }
