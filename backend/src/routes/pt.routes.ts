@@ -1,10 +1,13 @@
 import { Router } from 'express'
 import {
   createPTServiceController,
+  deletePTServiceController,
   getPTServiceDetailController,
   getPTServiceListController,
-  getPTUserByUsernameController
+  getPTUserByUsernameController,
+  updatePTServiceController
 } from '~/controllers/pt.controllers'
+import { getPTServiceDetailValidator, updatePTServiceValidator } from '~/middlewares/pt.middlewares'
 import { accessTokenValidator } from '~/middlewares/users.middlewares'
 import { wrapRequestHandler } from '~/utils/handlers'
 
@@ -45,5 +48,32 @@ ptRouter.post('/services', accessTokenValidator, wrapRequestHandler(createPTServ
  * Query: { username: string }
  */
 ptRouter.get('/debug/user-by-username', wrapRequestHandler(getPTUserByUsernameController))
+
+/**
+ * Description. Update a PT service package
+ * Path: /services/:service_id
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.patch(
+  '/services/:service_id',
+  accessTokenValidator, // Bắt buộc đăng nhập
+  getPTServiceDetailValidator, // Check param ID
+  updatePTServiceValidator, // Check dữ liệu gửi lên
+  wrapRequestHandler(updatePTServiceController)
+)
+
+/**
+ * Description. Delete (Soft delete) a PT service package
+ * Path: /services/:service_id
+ * Method: DELETE
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.delete(
+  '/services/:service_id',
+  accessTokenValidator,
+  getPTServiceDetailValidator,
+  wrapRequestHandler(deletePTServiceController)
+)
 
 export default ptRouter

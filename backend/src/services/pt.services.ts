@@ -178,6 +178,7 @@ class PTServiceLayer {
   }
 
   async updatePTService(
+    requester_user_id: string, // ID của người đang gọi API
     service_id: string,
     payload: Partial<{
       title: string
@@ -188,15 +189,28 @@ class PTServiceLayer {
       isActive: boolean
     }>
   ) {
-    if (!ObjectId.isValid(service_id)) {
+    if (!ObjectId.isValid(service_id) || !ObjectId.isValid(requester_user_id)) {
+      throw new ErrorWithStatus({ message: 'ID không hợp lệ', status: HTTP_STATUS.BAD_REQUEST })
+    }
+
+    // 1. Tìm gói dịch vụ và User đang request
+    const service = await databaseService.ptServices.findOne({ _id: new ObjectId(service_id) })
+    if (!service) {
+      throw new ErrorWithStatus({ message: 'Không tìm thấy gói dịch vụ PT', status: HTTP_STATUS.NOT_FOUND })
+    }
+
+    const requester = await databaseService.users.findOne({ _id: new ObjectId(requester_user_id) })
+
+    // 2. Kiểm tra quyền: Chỉ Admin HOẶC chính PT chủ sở hữu mới được sửa
+    if (requester?.role !== UserRole.ADMIN && service.ptId.toString() !== requester_user_id) {
       throw new ErrorWithStatus({
-        message: 'PT service id không hợp lệ',
-        status: HTTP_STATUS.BAD_REQUEST
+        message: 'Bạn không có quyền chỉnh sửa gói dịch vụ của người khác',
+        status: HTTP_STATUS.FORBIDDEN
       })
     }
 
+    // 3. Thực hiện update
     const updateData: Record<string, any> = {}
-
     if (payload.title !== undefined) updateData.title = payload.title.trim()
     if (payload.description !== undefined) updateData.description = payload.description.trim()
     if (payload.price !== undefined) updateData.price = payload.price
@@ -206,50 +220,38 @@ class PTServiceLayer {
 
     const updated = await databaseService.ptServices.findOneAndUpdate(
       { _id: new ObjectId(service_id) },
-      {
-        $set: updateData,
-        $currentDate: { updatedAt: true }
-      },
-      {
-        returnDocument: 'after'
-      }
+      { $set: updateData, $currentDate: { updatedAt: true } },
+      { returnDocument: 'after' }
     )
-
-    if (!updated) {
-      throw new ErrorWithStatus({
-        message: 'Không tìm thấy gói dịch vụ PT',
-        status: HTTP_STATUS.NOT_FOUND
-      })
-    }
 
     return updated
   }
 
-  async deletePTService(service_id: string) {
-    if (!ObjectId.isValid(service_id)) {
+  async deletePTService(requester_user_id: string, service_id: string) {
+    if (!ObjectId.isValid(service_id) || !ObjectId.isValid(requester_user_id)) {
+      throw new ErrorWithStatus({ message: 'ID không hợp lệ', status: HTTP_STATUS.BAD_REQUEST })
+    }
+
+    const service = await databaseService.ptServices.findOne({ _id: new ObjectId(service_id) })
+    if (!service) {
+      throw new ErrorWithStatus({ message: 'Không tìm thấy gói dịch vụ PT', status: HTTP_STATUS.NOT_FOUND })
+    }
+
+    const requester = await databaseService.users.findOne({ _id: new ObjectId(requester_user_id) })
+
+    // Kiểm tra quyền: Chỉ Admin HOẶC chính PT chủ sở hữu mới được xóa
+    if (requester?.role !== UserRole.ADMIN && service.ptId.toString() !== requester_user_id) {
       throw new ErrorWithStatus({
-        message: 'PT service id không hợp lệ',
-        status: HTTP_STATUS.BAD_REQUEST
+        message: 'Bạn không có quyền xóa gói dịch vụ của người khác',
+        status: HTTP_STATUS.FORBIDDEN
       })
     }
 
     const updated = await databaseService.ptServices.findOneAndUpdate(
       { _id: new ObjectId(service_id) },
-      {
-        $set: { isActive: false },
-        $currentDate: { updatedAt: true }
-      },
-      {
-        returnDocument: 'after'
-      }
+      { $set: { isActive: false }, $currentDate: { updatedAt: true } },
+      { returnDocument: 'after' }
     )
-
-    if (!updated) {
-      throw new ErrorWithStatus({
-        message: 'Không tìm thấy gói dịch vụ PT',
-        status: HTTP_STATUS.NOT_FOUND
-      })
-    }
 
     return {
       message: 'Ẩn gói dịch vụ PT thành công',

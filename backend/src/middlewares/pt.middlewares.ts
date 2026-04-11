@@ -88,3 +88,14 @@ export const createPTServiceValidator = validate(
     }
   })
 )
+
+export const updatePTServiceValidator = validate(
+  checkSchema({
+    title: { in: ['body'], optional: true, isString: { errorMessage: 'Tiêu đề phải là chuỗi' }, trim: true },
+    description: { in: ['body'], optional: true, isString: { errorMessage: 'Mô tả phải là chuỗi' }, trim: true },
+    price: { in: ['body'], optional: true, isFloat: { options: { gt: 0 }, errorMessage: 'Giá phải lớn hơn 0' }, toFloat: true },
+    sessions: { in: ['body'], optional: true, isInt: { options: { gt: 0 }, errorMessage: 'Số buổi phải lớn hơn 0' }, toInt: true },
+    durationDays: { in: ['body'], optional: true, isInt: { options: { gt: 0 }, errorMessage: 'Số ngày phải lớn hơn 0' }, toInt: true },
+    isActive: { in: ['body'], optional: true, isBoolean: { errorMessage: 'isActive phải là boolean' }, toBoolean: true }
+  })
+)

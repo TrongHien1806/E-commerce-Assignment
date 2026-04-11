@@ -69,3 +69,24 @@ export const getPTUserByUsernameController = async (req: Request, res: Response)
     result
   })
 }
+
+export const updatePTServiceController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const { service_id } = req.params as PTServiceParams
+
+  const result = await ptService.updatePTService(decoded_authorization.user_id, service_id, req.body)
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: 'Cập nhật gói PT thành công',
+    result
+  })
+}
+
+export const deletePTServiceController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const { service_id } = req.params as PTServiceParams
+
+  const result = await ptService.deletePTService(decoded_authorization.user_id, service_id)
+
+  return res.status(HTTP_STATUS.OK).json(result)
+}
