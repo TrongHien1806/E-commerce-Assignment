@@ -343,13 +343,27 @@ Body:
 
 * limit: 1..10
 
-## **3) Upload Media (/medias)**
+## 3) Upload Media (`/medias`)
 
-### **POST /medias/upload-image (Auth)**
+### POST `/medias/upload-image` (Auth)
+Upload một file ảnh lên hệ thống (được lưu trữ trực tiếp trên Cloudinary). Dùng cho ảnh đại diện, ảnh món ăn, portfolio của PT, hoặc ảnh đính kèm trong review.
 
-* **Header:** Content-Type: multipart/form-data  
-* **Body:** Truyền file qua form-data với key là image.  
-* **Response:** Trả về URL của ảnh đã upload thành công (Dùng cho Avatar, Portfolio PT, Hình ảnh Món ăn, Hình ảnh Review).
+- **Headers:**
+  - `Authorization: Bearer <access_token>`
+  - `Content-Type: multipart/form-data` 
+
+- **Body (form-data):**
+  - `image`: [File] Ảnh cần upload (Giới hạn tối đa: 5MB).
+
+**Response:**
+```json
+{
+  "message": "Upload ảnh thành công",
+  "result": [
+    "https://res.cloudinary.com/dtxhrmafz/image/upload/v1775898185/pt-ecommerce/hpdsdddl4dnqe9vlnznl.jpg"
+  ]
+}
+```
 
 ## **4) Foods (/foods)**
 

@@ -4,8 +4,8 @@ import HTTP_STATUS from '~/constants/httpStatus'
 
 export const uploadImageController = async (req: Request, res: Response) => {
   // THÊM 2 DÒNG NÀY ĐỂ SOI XEM REQUEST CÓ GÌ
-  console.log("File nhận được:", req.file);
-  console.log("Body nhận được:", req.body);
+  // console.log("File nhận được:", req.file);
+  // console.log("Body nhận được:", req.body);
   
     // Multer sẽ đính kèm file vào req.file
   if (!req.file) {
