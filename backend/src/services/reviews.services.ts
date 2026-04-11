@@ -94,6 +94,8 @@ class ReviewService {
 
     const result = await databaseService.reviews.insertOne(newReview)
 
+    await this.updateAverageRating(payload.targetType, payload.targetId)
+
     return {
       _id: result.insertedId,
       ...newReview
@@ -116,8 +118,6 @@ class ReviewService {
       .sort({ createdAt: -1 })
       .toArray()
   }
-
-  // Thêm 2 hàm này vào bên trong class ReviewService (backend/src/services/reviews.services.ts)
 
   async updateReview(userId: string, reviewId: string, payload: Partial<CreateReviewPayload>) {
     // 1. Tìm đánh giá
@@ -161,12 +161,14 @@ class ReviewService {
       { $set: updateData }
     )
 
+    await this.updateAverageRating(review.targetType, review.targetId.toString())
+
     return {
       message: 'Cập nhật đánh giá thành công'
     }
   }
 
-async deleteReview(userId: string, reviewId: string) {
+  async deleteReview(userId: string, reviewId: string) {
     // 1. Tìm đánh giá xem có tồn tại không
     const review = await databaseService.reviews.findOne({ _id: new ObjectId(reviewId) })
     
@@ -191,8 +193,36 @@ async deleteReview(userId: string, reviewId: string) {
     // 4. Thực hiện xóa
     await databaseService.reviews.deleteOne({ _id: new ObjectId(reviewId) })
 
+    await this.updateAverageRating(review.targetType, review.targetId.toString())
+
     return {
       message: 'Xóa đánh giá thành công (Dành cho Admin)'
+    }
+  }
+
+  async updateAverageRating(targetType: 'Food' | 'PT', targetId: string) {
+    const targetObjectId = new ObjectId(targetId)
+
+    // Dùng Aggregation để tính trung bình cộng tất cả số sao (rating)
+    const result = await databaseService.reviews.aggregate([
+      { $match: { targetType, targetId: targetObjectId } },
+      { $group: { _id: null, averageRating: { $avg: '$rating' } } }
+    ]).toArray()
+
+    // Lấy kết quả, làm tròn 1 chữ số thập phân (VD: 4.6). Nếu chưa có ai đánh giá thì về 0.
+    const newRating = result.length > 0 ? Number(result[0].averageRating.toFixed(1)) : 0
+
+    // Cập nhật ngược lại vào Database của PT hoặc Food
+    if (targetType === 'PT') {
+      await databaseService.users.updateOne(
+        { _id: targetObjectId },
+        { $set: { 'ptProfile.rating': newRating } }
+      )
+    } else if (targetType === 'Food') {
+      await databaseService.foods.updateOne(
+        { _id: targetObjectId },
+        { $set: { rating: newRating } }
+      )
     }
   }
 }
