@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   createPTServiceController,
   deletePTServiceController,
+  getPTClientsController,
   getPTServiceDetailController,
   getPTServiceListController,
   getPTUserByUsernameController,
@@ -74,6 +75,20 @@ ptRouter.delete(
   accessTokenValidator,
   getPTServiceDetailValidator,
   wrapRequestHandler(deletePTServiceController)
+)
+
+// Trong file backend/src/routes/pt.routes.ts
+
+/**
+ * Description. Get list of clients who registered current PT's services (PT Dashboard)
+ * Path: /clients
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ */
+ptRouter.get(
+  '/clients',
+  accessTokenValidator, // Bắt buộc phải đăng nhập
+  wrapRequestHandler(getPTClientsController)
 )
 
 export default ptRouter

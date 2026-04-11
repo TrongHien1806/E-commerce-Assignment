@@ -90,3 +90,14 @@ export const deletePTServiceController = async (req: Request, res: Response) => 
 
   return res.status(HTTP_STATUS.OK).json(result)
 }
+
+export const getPTClientsController = async (req: Request, res: Response) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  
+  const result = await ptService.getPTClients(decoded_authorization.user_id)
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: 'Lấy danh sách học viên thành công',
+    result
+  })
+}

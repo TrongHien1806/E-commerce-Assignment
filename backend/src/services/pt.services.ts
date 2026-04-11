@@ -258,6 +258,54 @@ class PTServiceLayer {
       result: updated
     }
   }
+
+  async getPTClients(pt_user_id: string) {
+    if (!ObjectId.isValid(pt_user_id)) {
+      throw new ErrorWithStatus({ message: 'ID không hợp lệ', status: HTTP_STATUS.BAD_REQUEST })
+    }
+
+    // 1. Kiểm tra xem người gọi API có đúng là PT không
+    const ptUser = await databaseService.users.findOne({ _id: new ObjectId(pt_user_id) })
+    if (!ptUser || ptUser.role !== UserRole.PT) {
+      throw new ErrorWithStatus({ 
+        message: 'Chỉ có Personal Trainer (PT) mới được xem danh sách học viên', 
+        status: HTTP_STATUS.FORBIDDEN 
+      })
+    }
+
+    // 2. Tìm tất cả các gói dịch vụ thuộc sở hữu của PT này
+    const myServices = await databaseService.ptServices
+      .find({ ptId: new ObjectId(pt_user_id) })
+      .toArray()
+
+    const myServiceIds = myServices.map(service => service._id)
+
+    // Nếu PT chưa tạo gói nào, chắc chắn chưa có học viên
+    if (myServiceIds.length === 0) {
+      return []
+    }
+
+    // 3. Tìm các User có ID gói tập của PT nằm trong mảng registeredPTServices
+    const clients = await databaseService.users
+      .find(
+        { registeredPTServices: { $in: myServiceIds } },
+        { 
+          projection: { 
+            password: 0, 
+            forgot_password_token: 0, 
+            loginAttempts: 0,
+            locked_until: 0,
+            notifications: 0,
+            weightTracking: 0,
+            calorieTracking: 0 
+            // Ẩn đi các thông tin nhạy cảm/không cần thiết, chỉ lấy Profile cơ bản
+          } 
+        }
+      )
+      .toArray()
+
+    return clients
+  }
 }
 
 const ptService = new PTServiceLayer()
