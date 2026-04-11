@@ -592,6 +592,32 @@ class UsersService {
       .toArray()
   }
 
+  async approvePTAccount(targetUserId: string) {
+    const targetObjectId = new ObjectId(targetUserId)
+
+    const user = await databaseService.users.findOne({ _id: targetObjectId })
+    if (!user) {
+      throw new ErrorWithStatus({ message: 'Không tìm thấy người dùng này', status: HTTP_STATUS.NOT_FOUND })
+    }
+
+    if (user.role !== 'PT') { // Nhớ dùng UserRole.PT nếu bạn có import enum
+      throw new ErrorWithStatus({ message: 'Người dùng này không phải là PT', status: HTTP_STATUS.BAD_REQUEST })
+    }
+
+    // Cập nhật trường approvedByAdmin thành true
+    await databaseService.users.updateOne(
+      { _id: targetObjectId },
+      { 
+        $set: { 
+          account_status: AccountStatus.ACTIVE,
+          'ptProfile.approvedByAdmin': true },
+        $currentDate: { updated_at: true } 
+      }
+    )
+
+    return { message: 'Duyệt tài khoản PT thành công' }
+  }
+
   async updateMe(user_id: string, payload: UpdateMeReqBody) {
     const safePayload: { username?: string; phone?: string; date_of_birth?: Date } = {}
 

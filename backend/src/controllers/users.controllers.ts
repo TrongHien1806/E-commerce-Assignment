@@ -239,3 +239,10 @@ export const recommendPTController = async (
     result
   })
 }
+
+export const approvePTController = async (req: Request, res: Response) => {
+  const { user_id } = req.params as { user_id: string }
+  const result = await usersService.approvePTAccount(user_id)
+  
+  return res.status(HTTP_STATUS.OK).json(result)
+}

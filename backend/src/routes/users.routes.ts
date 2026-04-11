@@ -37,7 +37,8 @@ import {
   updateMeController,
   updatePTProfileController,
   updateUserStatusController,
-  getAllUsersController
+  getAllUsersController,
+  approvePTController
 } from '~/controllers/users.controllers'
 import { wrapRequestHandler } from '~/utils/handlers'
 
@@ -251,6 +252,19 @@ usersRouter.get(
   accessTokenValidator,
   recommendPTQueryValidator,
   wrapRequestHandler(recommendPTController)
+)
+
+/**
+ * Description. Approve a PT account (Admin only)
+ * Path: /:user_id/approve-pt
+ * Method: PATCH
+ * Header: { Authorization: Bearer <access_token> }
+ */
+usersRouter.patch(
+  '/:user_id/approve-pt',
+  accessTokenValidator,
+  isAdminValidator, // Chỉ Admin mới có quyền duyệt
+  wrapRequestHandler(approvePTController)
 )
 
 export default usersRouter
