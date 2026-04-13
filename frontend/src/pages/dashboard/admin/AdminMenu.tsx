@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChefHat, Edit2, Loader2, Plus, Search, Trash2, Truck, Upload, X } from 'lucide-react';
+import { ChefHat, Edit2, Loader2, MessageCircle, Plus, Search, Trash2, Truck, Upload, X } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,14 @@ type KitchenOrder = {
   deliveryAddress?: string;
   items?: Array<{ quantity?: number }>;
   grandTotal?: number;
+  createdAt?: string;
+};
+
+type FoodReview = {
+  _id: string;
+  reviewerId?: string;
+  rating?: number;
+  comment?: string;
   createdAt?: string;
 };
 
@@ -101,6 +109,10 @@ export default function AdminMenu() {
   const [showModal, setShowModal] = useState(false);
   const [editFood, setEditFood] = useState<FoodItem | null>(null);
   const [formData, setFormData] = useState<FoodFormValues>(emptyForm);
+  const [selectedFoodReviewId, setSelectedFoodReviewId] = useState<string>('');
+  const [foodReviews, setFoodReviews] = useState<FoodReview[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [isDeletingReviewId, setIsDeletingReviewId] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -133,6 +145,53 @@ export default function AdminMenu() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const loadFoodReviews = async (foodId: string) => {
+    if (!foodId) {
+      setFoodReviews([]);
+      return;
+    }
+
+    try {
+      setIsLoadingReviews(true);
+      const res = await api.get(`/reviews/Food/${foodId}`);
+      setFoodReviews(Array.isArray(res.data?.result) ? res.data.result : []);
+    } catch (error: any) {
+      setFoodReviews([]);
+      setWarning(error?.response?.data?.message || 'Khong the tai review mon an.');
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
+  useEffect(() => {
+    if (foods.length === 0) return;
+    if (!selectedFoodReviewId) {
+      const firstFoodId = foods[0]?._id || '';
+      setSelectedFoodReviewId(firstFoodId);
+      loadFoodReviews(firstFoodId);
+    }
+  }, [foods, selectedFoodReviewId]);
+
+  const handleSelectFoodReview = async (foodId: string) => {
+    setSelectedFoodReviewId(foodId);
+    await loadFoodReviews(foodId);
+  };
+
+  const handleDeleteFoodReview = async (reviewId: string) => {
+    if (!selectedFoodReviewId) return;
+
+    try {
+      setIsDeletingReviewId(reviewId);
+      setWarning(null);
+      await api.delete(`/reviews/${reviewId}`);
+      await loadFoodReviews(selectedFoodReviewId);
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the xoa review mon an.');
+    } finally {
+      setIsDeletingReviewId(null);
+    }
+  };
 
   const filteredFoods = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -508,6 +567,54 @@ export default function AdminMenu() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h2 className="text-xl font-black text-gray-900 uppercase inline-flex items-center gap-2">
+                <MessageCircle size={20} className="text-orange-500" /> Quan ly review do an/combo
+              </h2>
+              <select
+                value={selectedFoodReviewId}
+                onChange={(e) => handleSelectFoodReview(e.target.value)}
+                className="h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-orange-500/10"
+              >
+                {foods.map((food) => (
+                  <option key={food._id} value={food._id}>
+                    {food.name} {food.isCombo ? '(Combo)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-5 space-y-3">
+              {isLoadingReviews ? (
+                <div className="py-8 text-center text-sm text-gray-500">Dang tai review...</div>
+              ) : foodReviews.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-500">Mon nay chua co review nao.</div>
+              ) : (
+                foodReviews.map((review) => (
+                  <article key={review._id} className="rounded-2xl border border-gray-100 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-black text-gray-900">{Number(review.rating || 0).toFixed(1)} / 5</p>
+                      <button
+                        type="button"
+                        disabled={isDeletingReviewId === review._id}
+                        onClick={() => handleDeleteFoodReview(review._id)}
+                        className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 text-xs font-black disabled:opacity-50"
+                      >
+                        <Trash2 size={14} />
+                        {isDeletingReviewId === review._id ? 'Dang xoa...' : 'Xoa review'}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600">{review.comment || 'Khong co noi dung'}</p>
+                    <p className="mt-2 text-xs text-gray-400">
+                      User: {String(review.reviewerId || '').slice(-6)} • {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
+                    </p>
+                  </article>
+                ))
+              )}
             </div>
           </section>
         </main>

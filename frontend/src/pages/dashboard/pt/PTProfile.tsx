@@ -38,6 +38,14 @@ type PTMe = {
   };
 };
 
+type PTReview = {
+  _id: string;
+  reviewerId?: string;
+  rating?: number;
+  comment?: string;
+  createdAt?: string;
+};
+
 type ClientRow = {
   key: string;
   clientId: string;
@@ -76,19 +84,21 @@ export default function PTProfile() {
   const [me, setMe] = useState<PTMe | null>(null);
   const [services, setServices] = useState<PTService[]>([]);
   const [clients, setClients] = useState<PTClient[]>([]);
+  const [reviews, setReviews] = useState<PTReview[]>([]);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
       setWarning(null);
 
-      const [meRes, servicesRes, clientsRes] = await Promise.all([
-        api.get('/users/me'),
-        api.get('/pt/services?limit=100&page=1'),
-        api.get('/pt/clients')
-      ]);
+      const meRes = await api.get('/users/me');
 
       const meResult = meRes.data?.result;
+      const [servicesRes, clientsRes, reviewsRes] = await Promise.all([
+        api.get('/pt/services?limit=100&page=1'),
+        api.get('/pt/clients'),
+        api.get(`/reviews/PT/${meResult?._id}`)
+      ]);
       const allServices = Array.isArray(servicesRes.data?.result?.services) ? servicesRes.data.result.services : [];
       const ownServices = allServices.filter((service: any) => {
         const ownerId = typeof service?.ptId === 'string' ? service.ptId : service?.ptId?.toString?.();
@@ -98,6 +108,7 @@ export default function PTProfile() {
       setMe(meResult || null);
       setServices(ownServices);
       setClients(Array.isArray(clientsRes.data?.result) ? clientsRes.data.result : []);
+      setReviews(Array.isArray(reviewsRes.data?.result) ? reviewsRes.data.result : []);
     } catch (error) {
       console.error('Loi tai PT profile:', error);
       setWarning('Khong the tai du lieu hoc vien/goi PT. Vui long thu lai.');
@@ -281,6 +292,32 @@ export default function PTProfile() {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-gray-900">Review ve PT cua ban</h2>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tong: {reviews.length}</span>
+            </div>
+
+            {reviews.length === 0 ? (
+              <p className="text-sm text-gray-500">Chua co review nao.</p>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((review) => (
+                  <article key={review._id} className="rounded-2xl border border-gray-100 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-bold text-gray-800">Nguoi dung {String(review.reviewerId || '').slice(-6)}</p>
+                      <p className="text-sm font-black text-amber-600">{Number(review.rating || 0).toFixed(1)} / 5</p>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600">{review.comment || 'Khong co noi dung'}</p>
+                    <p className="mt-2 text-xs text-gray-400">
+                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         </main>
       </div>
