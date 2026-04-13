@@ -47,6 +47,15 @@ const Loading = () => (
   </div>
 );
 
+const DashboardRedirect = () => {
+  const { user } = useAuth();
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'Admin') return <Navigate to="/dashboard/admin" replace />;
+  if (user.role === 'PT') return <Navigate to="/dashboard/pt-view" replace />;
+  return <Navigate to="/dashboard/user" replace />;
+};
+
 // ==================== Protected Route ====================
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -94,6 +103,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['Customer']}>
                 <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardRedirect />
               </ProtectedRoute>
             }
           />

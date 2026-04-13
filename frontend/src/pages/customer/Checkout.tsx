@@ -17,21 +17,56 @@ import { Input } from '@/components/ui/Input';
 import Navbar from '@/components/layout/Navbar';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
+import api from '@/services/api';
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { subtotal, clearCart } = useCart();
+  const { subtotal, fetchCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState('vnpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [note, setNote] = useState('');
 
-  const handleCheckout = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
+  const handleCheckout = async () => {
+    if (!address.trim()) {
+      setErrorMessage('Vui lòng nhập địa chỉ nhận hàng trước khi thanh toán.');
+      return;
+    }
+
+    const paymentMap: Record<string, 'COD' | 'VNPay' | 'MoMo'> = {
+      cod: 'COD',
+      vnpay: 'VNPay',
+      momo: 'MoMo'
+    };
+
+    try {
+      setErrorMessage(null);
+      setIsProcessing(true);
+
+      const today = new Date();
+      today.setDate(today.getDate() + 1);
+
+      await api.post('/orders', {
+        deliveryAddress: address.trim(),
+        deliveryDate: today.toISOString(),
+        packageType: 'ONE_DAY',
+        cartType: 'FOOD',
+        distanceKm: 0,
+        paymentMethod: paymentMap[paymentMethod] || 'COD',
+        note: [fullName.trim(), phone.trim(), note.trim()].filter(Boolean).join(' | ')
+      });
+
+      await fetchCart();
       setIsProcessing(false);
       setShowSuccess(true);
-      clearCart();
-    }, 2000);
+    } catch (error: any) {
+      setIsProcessing(false);
+      setErrorMessage(error?.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+    }
   };
 
   return (
@@ -52,13 +87,23 @@ export default function Checkout() {
                 <MapPin size={24} className="text-orange-500" /> Thông tin giao hàng
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Họ và tên" placeholder="Nguyễn Văn A" />
-                <Input label="Số điện thoại" placeholder="0901234567" />
+                <Input label="Họ và tên" placeholder="Nguyễn Văn A" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <Input label="Số điện thoại" placeholder="0901234567" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 <div className="md:col-span-2">
-                  <Input label="Địa chỉ nhận hàng" placeholder="Số 123, Đường ABC, Quận XYZ, TP. HCM" />
+                  <Input
+                    label="Địa chỉ nhận hàng"
+                    placeholder="Số 123, Đường ABC, Quận XYZ, TP. HCM"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
                 </div>
                 <div className="md:col-span-2">
-                  <Input label="Ghi chú đơn hàng" placeholder="Ví dụ: Giao giờ hành chính, không cay..." />
+                  <Input
+                    label="Ghi chú đơn hàng"
+                    placeholder="Ví dụ: Giao giờ hành chính, không cay..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
                 </div>
               </div>
             </section>
@@ -70,8 +115,8 @@ export default function Checkout() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { id: 'vnpay', name: 'VNPay', icon: <Wallet className="text-blue-500" /> },
-                  { id: 'momo', name: 'MoMo', icon: <Wallet className="text-pink-500" /> },
+                  { id: 'vnpay', name: 'VNPay - ( Đang cập nhật )', icon: <Wallet className="text-blue-500" /> },
+                  { id: 'momo', name: 'MoMo - ( Đang cập nhật )', icon: <Wallet className="text-pink-500" /> },
                   { id: 'cod', name: 'Tiền mặt', icon: <Truck className="text-gray-500" /> },
                 ].map((method) => (
                   <button
@@ -135,6 +180,10 @@ export default function Checkout() {
               >
                 {isProcessing ? 'Đang xử lý...' : 'Xác nhận đặt hàng'}
               </Button>
+
+              {errorMessage ? (
+                <p className="text-sm font-medium text-red-500 text-center">{errorMessage}</p>
+              ) : null}
               
               <p className="text-center text-[10px] text-gray-400 font-medium">
                 Bằng cách đặt hàng, bạn đồng ý với Điều khoản dịch vụ của chúng tôi.
@@ -152,7 +201,7 @@ export default function Checkout() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => navigate('/dashboard')}
+              onClick={() => setShowSuccess(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             <motion.div

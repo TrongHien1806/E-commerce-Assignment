@@ -1,230 +1,183 @@
-import { useState, useMemo } from 'react';
-import { Search, Star, Award, TrendingUp, ChevronRight, Filter, X, Check } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { useEffect, useMemo, useState } from 'react';
+import { Dumbbell, Loader2, Search, Star, UserRound } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/Input';
+import api from '@/services/api';
 
-const ptList = [
-  { 
-    id: 1, 
-    name: 'Nguyễn Văn A', 
-    experience: '5 năm', 
-    specialization: 'Giảm cân, Đốt mỡ', 
-    rating: 4.9, 
-    reviews: 128,
-    image: 'https://picsum.photos/seed/pt1/400/400',
-    price: 1500000,
-    tags: ['Chuyên gia dinh dưỡng', 'Tận tâm']
-  },
-  { 
-    id: 2, 
-    name: 'Trần Thị B', 
-    experience: '3 năm', 
-    specialization: 'Tăng cơ, Yoga', 
-    rating: 4.8, 
-    reviews: 95,
-    image: 'https://picsum.photos/seed/pt2/400/400',
-    price: 1200000,
-    tags: ['Yoga Master', 'Phục hồi']
-  },
-  { 
-    id: 3, 
-    name: 'Lê Hoàng C', 
-    experience: '8 năm', 
-    specialization: 'Bodybuilding, Thi đấu', 
-    rating: 5.0, 
-    reviews: 210,
-    image: 'https://picsum.photos/seed/pt3/400/400',
-    price: 2500000,
-    tags: ['Vận động viên', 'Kỷ luật']
-  },
-  { 
-    id: 4, 
-    name: 'Phạm Minh D', 
-    experience: '4 năm', 
-    specialization: 'Calisthenics, Sức bền', 
-    rating: 4.7, 
-    reviews: 82,
-    image: 'https://picsum.photos/seed/pt4/400/400',
-    price: 1800000,
-    tags: ['Street Workout']
-  },
-];
+type PTService = {
+  _id: string;
+  title?: string;
+  description?: string;
+  sessions?: number;
+  durationDays?: number;
+  price?: number;
+};
 
-const filterOptions = [
-  { label: 'Chuyên môn', options: ['Tất cả', 'Giảm cân', 'Tăng cơ', 'Yoga', 'Bodybuilding', 'Calisthenics'] },
-  { label: 'Kinh nghiệm', options: ['Tất cả', 'Dưới 3 năm', '3-5 năm', 'Trên 5 năm'] },
-];
+type PTSuggestion = {
+  _id: string;
+  username?: string;
+  email?: string;
+  ptProfile?: {
+    experienceYears?: number;
+    specialties?: string[];
+    rating?: number;
+    portfolioImages?: string[];
+  };
+};
 
 export default function UserPT() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [warning, setWarning] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilter, setShowFilter] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState({
-    specialization: 'Tất cả',
-    experience: 'Tất cả'
-  });
 
-  const filteredPTs = useMemo(() => {
-    return ptList.filter(pt => {
-      const matchesSearch = pt.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           pt.specialization.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesSpec = selectedFilters.specialization === 'Tất cả' || 
-                         pt.specialization.includes(selectedFilters.specialization);
-      
-      let matchesExp = true;
-      if (selectedFilters.experience === 'Dưới 3 năm') {
-        matchesExp = parseInt(pt.experience) < 3;
-      } else if (selectedFilters.experience === '3-5 năm') {
-        matchesExp = parseInt(pt.experience) >= 3 && parseInt(pt.experience) <= 5;
-      } else if (selectedFilters.experience === 'Trên 5 năm') {
-        matchesExp = parseInt(pt.experience) > 5;
+  const [services, setServices] = useState<PTService[]>([]);
+  const [suggestions, setSuggestions] = useState<PTSuggestion[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setWarning(null);
+
+        const [serviceRes, suggestionRes] = await Promise.allSettled([
+          api.get('/users/me/pt-services'),
+          api.get('/users/recommendations/pts?limit=12')
+        ]);
+
+        if (serviceRes.status === 'fulfilled') {
+          const items = serviceRes.value.data?.result?.services;
+          setServices(Array.isArray(items) ? items : []);
+        }
+
+        if (suggestionRes.status === 'fulfilled') {
+          const items = suggestionRes.value.data?.result?.suggestions;
+          setSuggestions(Array.isArray(items) ? items : []);
+        } else {
+          setWarning('Chưa có dữ liệu gợi ý PT. Vui lòng cập nhật hồ sơ sức khỏe để nhận đề xuất.');
+        }
+      } catch (error) {
+        console.error('Lỗi tải dữ liệu PT:', error);
+        setWarning('Không thể tải dữ liệu PT lúc này.');
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      return matchesSearch && matchesSpec && matchesExp;
+    fetchData();
+  }, []);
+
+  const filteredSuggestions = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+    if (!keyword) return suggestions;
+
+    return suggestions.filter((pt) => {
+      const name = pt.username?.toLowerCase() || '';
+      const email = pt.email?.toLowerCase() || '';
+      const specialties = (pt.ptProfile?.specialties || []).join(' ').toLowerCase();
+      return name.includes(keyword) || email.includes(keyword) || specialties.includes(keyword);
     });
-  }, [searchQuery, selectedFilters]);
+  }, [searchQuery, suggestions]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-[#fafafa]">
+        <Sidebar role="user" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="animate-spin text-orange-500" size={40} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="user" />
-      <div className="flex-1 flex flex-col">
-        <Header title="Huấn luyện viên của tôi" userName="Nam" userRole="Người dùng" avatar="https://i.pravatar.cc/150?u=nam" hideSearch={true} />
-        
-        <main className="p-8 space-y-8 overflow-y-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900">Huấn luyện viên chuyên nghiệp</h1>
-              <p className="text-gray-500">Tìm kiếm người đồng hành hoàn hảo cho mục tiêu của bạn</p>
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header title="Gói huấn luyện & Huấn luyện viên" userRole="Người dùng" hideSearch={true} />
+
+        <main className="p-8 space-y-8 overflow-y-auto min-w-0">
+          {warning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {warning}
             </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-80">
-                <Input 
-                  placeholder="Tìm tên PT, chuyên môn..." 
-                  icon={<Search size={18} />}
+          ) : null}
+
+          <section className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 space-y-6">
+            <div className="flex items-center gap-3">
+              <Dumbbell size={22} className="text-gray-900" />
+              <h2 className="text-xl font-black text-gray-900">Gói huấn luyện đã đăng ký</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {services.length === 0 ? (
+                <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm font-medium text-gray-500">
+                  Bạn chưa đăng ký gói huấn luyện nào.
+                </div>
+              ) : (
+                services.map((service) => (
+                  <article key={service._id} className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+                    <p className="text-sm font-black text-gray-900">{service.title || 'Gói PT'}</p>
+                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">{service.description || 'Không có mô tả'}</p>
+                    <div className="mt-4 space-y-1 text-xs font-semibold text-gray-600">
+                      <p>Số buổi: {Number(service.sessions || 0)}</p>
+                      <p>Thời hạn: {Number(service.durationDays || 0)} ngày</p>
+                      <p>Giá: {Number(service.price || 0).toLocaleString('vi-VN')} đ</p>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 space-y-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <UserRound size={22} className="text-gray-900" />
+                <h2 className="text-xl font-black text-gray-900">Danh sách huấn luyện viên gợi ý</h2>
+              </div>
+              <div className="w-full md:w-80">
+                <Input
+                  placeholder="Tìm theo tên, email, chuyên môn..."
+                  icon={<Search size={16} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className={cn("rounded-xl shrink-0 transition-all", showFilter && "bg-orange-50 border-orange-200 text-orange-500")}
-                onClick={() => setShowFilter(!showFilter)}
-              >
-                <Filter size={20} />
-              </Button>
             </div>
-          </div>
 
-          <AnimatePresence>
-            {showFilter && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {filterOptions.map((group) => (
-                    <div key={group.label} className="space-y-4">
-                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">{group.label}</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {group.options.map((opt) => (
-                          <button
-                            key={opt}
-                            onClick={() => setSelectedFilters({
-                              ...selectedFilters,
-                              [group.label === 'Chuyên môn' ? 'specialization' : 'experience']: opt
-                            })}
-                            className={cn(
-                              "px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
-                              (group.label === 'Chuyên môn' ? selectedFilters.specialization : selectedFilters.experience) === opt
-                                ? "bg-orange-500 text-white shadow-lg shadow-orange-200"
-                                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                            )}
-                          >
-                            {opt}
-                            {(group.label === 'Chuyên môn' ? selectedFilters.specialization : selectedFilters.experience) === opt && <Check size={14} />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredSuggestions.length === 0 ? (
+                <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm font-medium text-gray-500">
+                  Không có PT phù hợp với bộ lọc hiện tại.
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {filteredPTs.map((pt) => (
-              <Link key={pt.id} to={`/pt/${pt.id}`}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.01 }}
-                  className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row gap-6 group cursor-pointer h-full"
-                >
-                  <div className="relative w-full sm:w-48 h-48 rounded-2xl overflow-hidden shrink-0">
-                    <img 
-                      src={pt.image} 
-                      alt={pt.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                      <Star size={12} className="text-yellow-500 fill-yellow-500" />
-                      <span className="text-[10px] font-bold text-gray-900">{pt.rating} ({pt.reviews})</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1 flex flex-col justify-between space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-1">
-                        {pt.tags.map(tag => (
-                          <span key={tag} className="text-[10px] font-bold uppercase tracking-wider text-blue-500 bg-blue-50 px-2 py-0.5 rounded">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900">{pt.name}</h3>
-                      <div className="grid grid-cols-2 gap-y-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Award size={16} className="text-orange-500" />
-                          <span>{pt.experience} kinh nghiệm</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <TrendingUp size={16} className="text-green-500" />
-                          <span>{pt.specialization}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+              ) : (
+                filteredSuggestions.map((pt) => (
+                  <article key={pt._id} className="rounded-2xl border border-gray-100 p-5">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs text-gray-400">Giá từ</p>
-                        <p className="text-lg font-black text-orange-500">
-                          {pt.price.toLocaleString('vi-VN')}đ<span className="text-xs font-medium text-gray-400">/tháng</span>
-                        </p>
+                        <p className="text-base font-black text-gray-900">{pt.username || 'Huấn luyện viên'}</p>
+                        <p className="text-xs font-medium text-gray-500 mt-1">{pt.email || 'N/A'}</p>
                       </div>
-                      <Button className="rounded-xl group-hover:bg-orange-600">
-                        Xem hồ sơ <ChevronRight size={16} className="ml-1" />
-                      </Button>
+                      <div className="inline-flex items-center gap-1 rounded-lg bg-yellow-50 px-2 py-1 text-xs font-bold text-yellow-700">
+                        <Star size={12} className="fill-yellow-500 text-yellow-500" />
+                        {Number(pt.ptProfile?.rating || 0).toFixed(1)}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              </Link>
-            ))}
-          </div>
-          {filteredPTs.length === 0 && (
-            <div className="text-center py-20">
-              <p className="text-gray-400 font-bold">Không tìm thấy huấn luyện viên phù hợp...</p>
+
+                    <div className="mt-4 space-y-2 text-sm text-gray-600">
+                      <p>
+                        Kinh nghiệm: <span className="font-bold">{Number(pt.ptProfile?.experienceYears || 0)} năm</span>
+                      </p>
+                      <p className="line-clamp-2">
+                        Chuyên môn: <span className="font-bold">{(pt.ptProfile?.specialties || []).join(', ') || 'Chưa cập nhật'}</span>
+                      </p>
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
-          )}
+          </section>
         </main>
       </div>
     </div>

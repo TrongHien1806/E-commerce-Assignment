@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
 import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 
 const registerSchema = z.object({
   email: z.string().email('Email không đúng định dạng'),
@@ -35,6 +36,7 @@ export default function Register() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const {
     register,
@@ -109,23 +111,19 @@ const timer = setTimeout(checkUsername, 500);
 
       const response = await api.post('/users/register', payload);
 
-      setIsSuccess(true);
-      
-      setTimeout(() => {
-        if (data.role === 'Customer') {
-          // Nếu là Customer, backend trả về token luôn
-          const { access_token, refresh_token } = response.data.result;
-          if (access_token) {
-             localStorage.setItem('access_token', access_token);
-             localStorage.setItem('refresh_token', refresh_token);
-             localStorage.setItem('userRole', 'Customer');
-          }
-          navigate('/dashboard/user');
-        } else {
-          // Nếu là PT, backend trả requires_approval: true (không có token)
-          navigate('/login'); // Hoặc đẩy về một trang thông báo chờ duyệt
+      if (data.role === 'Customer') {
+        const { access_token, refresh_token } = response.data.result || {};
+        if (access_token && refresh_token) {
+          await login(access_token, refresh_token);
+          localStorage.setItem('userRole', 'Customer');
         }
-      }, 3000);
+      }
+
+      setIsSuccess(true);
+
+      setTimeout(() => {
+        navigate(data.role === 'Customer' ? '/dashboard/user' : '/login');
+      }, 1500);
 
     } catch (err: any) {
       // Ưu tiên hiển thị lỗi validation 422 từ backend nếu có

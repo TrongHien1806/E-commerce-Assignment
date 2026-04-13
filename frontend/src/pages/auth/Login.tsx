@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Checkbox } from '@/components/ui/Checkbox';
 import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Vui lòng nhập Email hoặc Tên đăng nhập'),
@@ -23,6 +24,7 @@ export default function Login() {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const {
     register,
@@ -47,9 +49,8 @@ export default function Login() {
       // API Spec: response.data.result chứa token và role
       const { access_token, refresh_token, role } = response.data.result;
 
-      // Lưu token
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
+      // Cập nhật token + user state qua AuthContext
+      await login(access_token, refresh_token);
       localStorage.setItem('userRole', role);
 
       // Điều hướng theo Role

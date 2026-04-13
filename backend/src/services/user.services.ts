@@ -768,8 +768,19 @@ class UsersService {
       })
     }
 
-    const registeredServices = (user.registeredPTServices || []).map((id) => String(id))
-    if (registeredServices.includes(String(ptService._id))) {
+    type RegisteredServiceRaw = ObjectId | { serviceId: ObjectId | string }
+    const registeredRaw = (user.registeredPTServices || []) as RegisteredServiceRaw[]
+
+    const registeredServiceIds = registeredRaw
+      .map((item) => {
+        if (typeof item === 'object' && item !== null && 'serviceId' in item) {
+          return String(item.serviceId)
+        }
+        return String(item)
+      })
+      .filter(Boolean)
+
+    if (registeredServiceIds.includes(String(ptService._id))) {
       throw new ErrorWithStatus({
         message: USERS_MESSAGES.PT_SERVICE_ALREADY_REGISTERED,
         status: HTTP_STATUS.BAD_REQUEST
@@ -817,19 +828,69 @@ class UsersService {
       })
     }
 
-    const serviceIds = user.registeredPTServices || []
-    if (serviceIds.length === 0) {
+    type RegisteredServiceRaw =
+      | ObjectId
+      | {
+          serviceId: ObjectId | string
+          remainingSessions?: number
+          totalSessions?: number
+          registeredAt?: Date
+        }
+
+    const registeredRaw = (user.registeredPTServices || []) as RegisteredServiceRaw[]
+
+    const normalizedRegistrations = registeredRaw
+      .map((item) => {
+        if (typeof item === 'object' && item !== null && 'serviceId' in item) {
+          return {
+            serviceId: String(item.serviceId),
+            remainingSessions: Number(item.remainingSessions ?? 0),
+            totalSessions: Number(item.totalSessions ?? 0),
+            registeredAt: item.registeredAt
+          }
+        }
+
+        return {
+          serviceId: String(item),
+          remainingSessions: 0,
+          totalSessions: 0,
+          registeredAt: undefined
+        }
+      })
+      .filter((item) => Boolean(item.serviceId))
+
+    if (normalizedRegistrations.length === 0) {
       return {
         services: []
       }
     }
 
-    const services = await databaseService.ptServices.find({ _id: { $in: serviceIds } }).toArray()
+    const serviceObjectIds = normalizedRegistrations
+      .filter((item) => ObjectId.isValid(item.serviceId))
+      .map((item) => new ObjectId(item.serviceId))
+
+    if (serviceObjectIds.length === 0) {
+      return {
+        services: []
+      }
+    }
+
+    const services = await databaseService.ptServices.find({ _id: { $in: serviceObjectIds } }).toArray()
 
     const serviceMap = new Map(services.map((service) => [String(service._id), service]))
-    const orderedServices = serviceIds
-      .map((id) => serviceMap.get(String(id)))
-      .filter((service): service is (typeof services)[number] => Boolean(service))
+    const orderedServices = normalizedRegistrations
+      .map((registration) => {
+        const service = serviceMap.get(registration.serviceId)
+        if (!service) return null
+
+        return {
+          ...service,
+          remainingSessions: registration.remainingSessions,
+          totalSessions: registration.totalSessions,
+          registeredAt: registration.registeredAt
+        }
+      })
+      .filter((service) => Boolean(service))
 
     return {
       services: orderedServices
