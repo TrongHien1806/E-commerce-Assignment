@@ -1,15 +1,17 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000'
 });
 
 // Request Interceptor: Gắn Access Token vào header
 api.interceptors.request.use(
   (config) => {
+    // Với FormData, để browser tự gắn multipart boundary để backend nhận được req.file.
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+      delete config.headers['Content-Type'];
+    }
+
     const rawToken = localStorage.getItem('access_token');
     const token = rawToken?.replace(/^"|"$/g, '').trim();
 

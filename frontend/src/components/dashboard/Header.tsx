@@ -217,11 +217,7 @@ export default function Header({ title, userName, userRole, avatar, hideSearch =
         const formData = new FormData();
         formData.append('image', avatarFile);
 
-        const uploadRes = await api.post('/medias/upload-image', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
+        const uploadRes = await api.post('/medias/upload-image', formData);
 
         const uploadedUrl = uploadRes.data?.result?.[0];
         if (!uploadedUrl || typeof uploadedUrl !== 'string') {
@@ -232,17 +228,45 @@ export default function Header({ title, userName, userRole, avatar, hideSearch =
         avatarPayload = null;
       }
 
-      await api.patch('/users/me', {
+      const updatePayload: {
+        username: string;
+        phone: string;
+        date_of_birth?: string;
+        avatar?: string | null;
+      } = {
         username: formUsername.trim(),
-        phone: formPhone.trim(),
-        date_of_birth: formDateOfBirth || undefined,
-        avatar: avatarPayload
-      });
+        phone: formPhone.trim()
+      };
+
+      if (formDateOfBirth) {
+        updatePayload.date_of_birth = formDateOfBirth;
+      }
+
+      if (avatarPayload !== undefined) {
+        updatePayload.avatar = avatarPayload;
+      }
+
+      let profileUpdateRes = await api.patch('/users/me', updatePayload);
+
+      const updatedProfile = profileUpdateRes.data?.result;
+
+      // Fallback đồng bộ avatar: nếu backend response chưa phản ánh đúng avatar vừa lưu, gửi lại avatar riêng.
+      if (avatarPayload !== undefined && updatedProfile?.avatar !== avatarPayload) {
+        profileUpdateRes = await api.patch('/users/me', { avatar: avatarPayload });
+      }
+
+      const finalUpdatedProfile = profileUpdateRes.data?.result;
+      if (finalUpdatedProfile) {
+        setProfile(finalUpdatedProfile);
+      }
 
       const canUpdateHealthProfile =
         formAge.trim() !== '' &&
         formHeightCm.trim() !== '' &&
         formWeightKg.trim() !== '';
+
+      const followUpTasks: Promise<unknown>[] = [];
+      let hasFollowUpFailure = false;
 
       if (canUpdateHealthProfile) {
         const allergies = formAllergies
@@ -250,15 +274,17 @@ export default function Header({ title, userName, userRole, avatar, hideSearch =
           .map((item) => item.trim())
           .filter(Boolean);
 
-        await api.post('/users/health-profile', {
-          gender: formGender,
-          age: Number(formAge),
-          heightCm: Number(formHeightCm),
-          weightKg: Number(formWeightKg),
-          activityLevel: formActivityLevel,
-          goal: formGoal,
-          allergies
-        });
+        followUpTasks.push(
+          api.post('/users/health-profile', {
+            gender: formGender,
+            age: Number(formAge),
+            heightCm: Number(formHeightCm),
+            weightKg: Number(formWeightKg),
+            activityLevel: formActivityLevel,
+            goal: formGoal,
+            allergies
+          })
+        );
       }
 
       if (isPT) {
@@ -272,16 +298,29 @@ export default function Header({ title, userName, userRole, avatar, hideSearch =
           .map((item) => item.trim())
           .filter(Boolean);
 
-        await api.patch('/users/me/pt-profile', {
-          experienceYears: Number(formExperienceYears || 0),
-          specialties,
-          portfolioImages
-        });
+        followUpTasks.push(
+          api.patch('/users/me/pt-profile', {
+            experienceYears: Number(formExperienceYears || 0),
+            specialties,
+            portfolioImages
+          })
+        );
+      }
+
+      if (followUpTasks.length > 0) {
+        const settled = await Promise.allSettled(followUpTasks);
+        const hasFailedTask = settled.some((item) => item.status === 'rejected');
+        if (hasFailedTask) {
+          hasFollowUpFailure = true;
+          setSettingsError('Ảnh/hồ sơ cơ bản đã được cập nhật, nhưng một số thông tin mở rộng chưa lưu được. Vui lòng kiểm tra lại dữ liệu.');
+        }
       }
 
       await fetchMe();
       window.dispatchEvent(new Event('fitbite-profile-updated'));
-      setShowSettingsModal(false);
+      if (!hasFollowUpFailure) {
+        setShowSettingsModal(false);
+      }
     } catch (error: any) {
       setSettingsError(error?.response?.data?.message || 'Không thể lưu cài đặt tài khoản.');
     } finally {
