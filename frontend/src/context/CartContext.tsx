@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '@/services/api';
 
 interface CartItem {
-  id: number;
+  id: string | number;
   name: string;
   price: number;
   image: string;
@@ -12,60 +13,102 @@ interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'qty'>) => void;
-  removeItem: (id: number) => void;
-  updateQty: (id: number, delta: number) => void;
-  clearCart: () => void;
+  addItem: (item: Omit<CartItem, 'qty'>, quantity?: number) => Promise<void>;
+  removeItem: (id: string | number) => Promise<void>;
+  updateQty: (id: string | number, delta: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   cartCount: number;
   subtotal: number;
+  fetchCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [subtotal, setSubtotal] = useState(0);
+
+  // Lấy giỏ hàng từ Backend
+  const fetchCart = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return; // Nếu chưa đăng nhập thì không gọi API giỏ hàng
+
+    try {
+      const res = await api.get('/cart');
+      const foodCart = res.data.result.foodCart;
+      
+      if (foodCart && foodCart.items) {
+        // Map dữ liệu từ BE sang FE
+        const mappedItems: CartItem[] = foodCart.items.map((item: any) => ({
+          id: item.itemId,
+          name: item.itemName,
+          price: item.unitPrice,
+          image: item.image || 'https://picsum.photos/seed/food/200/200', // fallback ảnh nếu thiếu
+          qty: item.quantity,
+          calories: item.unitCalories,
+          type: 'food'
+        }));
+        setItems(mappedItems);
+        setSubtotal(foodCart.summary?.subtotal || 0);
+      }
+    } catch (err) {
+      console.error('Lỗi khi lấy giỏ hàng:', err);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
-  }, [items]);
+    fetchCart();
+  }, []);
 
-  const addItem = (newItem: Omit<CartItem, 'qty'>) => {
-    setItems(prev => {
-      const existing = prev.find(item => item.id === newItem.id && item.type === newItem.type);
-      if (existing) {
-        return prev.map(item => 
-          item.id === newItem.id && item.type === newItem.type 
-            ? { ...item, qty: item.qty + 1 } 
-            : item
-        );
-      }
-      return [...prev, { ...newItem, qty: 1 }];
-    });
+  const addItem = async (newItem: Omit<CartItem, 'qty'>, quantity: number = 1) => {
+    try {
+      // Gọi API thêm vào giỏ
+      await api.post('/cart/items', { 
+        itemId: newItem.id, 
+        quantity: quantity 
+      });
+      // Gọi lại hàm fetch để cập nhật state đồng bộ với BE
+      await fetchCart();
+    } catch (err) {
+      console.error('Lỗi thêm giỏ hàng:', err);
+    }
   };
 
-  const removeItem = (id: number) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+  const removeItem = async (id: string | number) => {
+    try {
+      await api.delete(`/cart/items/${id}`);
+      await fetchCart();
+    } catch (err) {
+      console.error('Lỗi xóa giỏ hàng:', err);
+    }
   };
 
-  const updateQty = (id: number, delta: number) => {
-    setItems(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, qty: Math.max(1, item.qty + delta) };
-      }
-      return item;
-    }));
+  const updateQty = async (id: string | number, delta: number) => {
+    try {
+      const currentItem = items.find(i => i.id === id);
+      if (!currentItem) return;
+      
+      const newQty = Math.max(1, currentItem.qty + delta); // Đảm bảo số lượng >= 1
+      await api.patch(`/cart/items/${id}`, { quantity: newQty });
+      await fetchCart();
+    } catch (err) {
+      console.error('Lỗi cập nhật số lượng:', err);
+    }
   };
 
-  const clearCart = () => setItems([]);
+  const clearCart = async () => {
+    try {
+      await api.delete('/cart/food'); // Xóa giỏ food theo API spec
+      await fetchCart();
+    } catch (err) {
+      console.error('Lỗi xóa toàn bộ giỏ hàng:', err);
+    }
+  };
 
   const cartCount = items.reduce((acc, item) => acc + item.qty, 0);
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, cartCount, subtotal }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, cartCount, subtotal, fetchCart }}>
       {children}
     </CartContext.Provider>
   );

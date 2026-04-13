@@ -1,55 +1,63 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { 
-  ArrowLeft, 
-  Flame, 
-  Clock, 
-  ShieldCheck, 
-  AlertTriangle, 
-  Plus, 
-  Minus,
-  ShoppingCart,
-  CheckCircle2
-} from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Flame, Clock, ShieldCheck, AlertTriangle, Plus, Minus, ShoppingCart, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import Navbar from '@/components/layout/Navbar';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
-
-const foodItem = {
-  id: 1,
-  name: 'Ức gà áp chảo sốt cam',
-  price: 85000,
-  calories: 450,
-  image: 'https://picsum.photos/seed/chicken/800/600',
-  description: 'Món ăn giàu protein với ức gà tươi ngon được áp chảo vàng đều, kết hợp cùng sốt cam chua ngọt thanh mát. Phù hợp cho chế độ ăn tăng cơ và giảm mỡ.',
-  nutrition: {
-    'Đạm (Protein)': '42g',
-    'Tinh bột (Carbs)': '12g',
-    'Béo (Fat)': '8g',
-    'Xơ (Fiber)': '4g'
-  },
-  ingredients: ['Ức gà 200g', 'Cam sành', 'Mật ong', 'Dầu olive', 'Gia vị thảo mộc'],
-  allergies: ['Không có'],
-  prepTime: '20-30 phút'
-};
+import api from '@/services/api'; 
 
 export default function FoodDetails() {
   const { id } = useParams();
   const [qty, setQty] = useState(1);
   const { addItem } = useCart();
+  const [foodItem, setFoodItem] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFoodItem = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get(`/foods/${id}`);
+        // API Spec quy định data thường nằm trong response.data.result
+        setFoodItem(response.data.result || response.data);
+      } catch (error) {
+        console.error("Lỗi khi tải thông tin món ăn:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchFoodItem();
+    }
+  }, [id]);
 
   const handleAddToCart = () => {
+    if (!foodItem) return;
     addItem({
-      id: foodItem.id,
+      id: foodItem._id || foodItem.id, // BE dùng _id
       name: foodItem.name,
       price: foodItem.price,
-      image: foodItem.image,
-      calories: foodItem.calories,
+      image: foodItem.images?.[0] || 'https://picsum.photos/seed/food/400/300', // Lấy ảnh đầu tiên
+      calories: foodItem.calories || 0,
       type: 'food'
     }, qty);
   };
+
+  // 1. Phải có màn hình Loading chờ API trả data về, nếu không sẽ crash
+  if (isLoading || !foodItem) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        <div className="pt-32 text-center font-bold text-gray-500 flex flex-col items-center">
+          <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          Đang tải chi tiết món ăn...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -69,16 +77,22 @@ export default function FoodDetails() {
           >
             <div className="aspect-[4/3] rounded-[40px] overflow-hidden shadow-2xl border-8 border-gray-50">
               <img 
-                src={foodItem.image} 
+                // 2. Sửa lại cách lấy ảnh từ Backend
+                src={foodItem.images?.[0] || 'https://picsum.photos/seed/food/800/600'} 
                 alt={foodItem.name} 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
             </div>
             <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                  <img src={`https://picsum.photos/seed/food${i}/200/200`} alt="Gallery" className="w-full h-full object-cover" />
+              {/* Hiển thị danh sách ảnh nếu Backend có trả về mảng images */}
+              {(foodItem.images || [1, 2, 3, 4]).slice(0, 4).map((imgUrl: any, index: number) => (
+                <div key={index} className="aspect-square rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+                  <img 
+                    src={typeof imgUrl === 'string' ? imgUrl : `https://picsum.photos/seed/food${index}/200/200`} 
+                    alt={`Gallery ${index}`} 
+                    className="w-full h-full object-cover" 
+                  />
                 </div>
               ))}
             </div>
@@ -96,49 +110,71 @@ export default function FoodDetails() {
               </div>
               <h1 className="text-4xl font-black text-gray-900 leading-tight">{foodItem.name}</h1>
               <div className="flex items-center gap-6">
-                <p className="text-3xl font-black text-orange-500">{foodItem.price.toLocaleString('vi-VN')}đ</p>
+                <p className="text-3xl font-black text-orange-500">{(foodItem.price || 0).toLocaleString('vi-VN')}đ</p>
                 <div className="h-8 w-px bg-gray-100" />
                 <div className="flex items-center gap-2 text-gray-500">
                   <Flame size={20} className="text-orange-500" />
-                  <span className="font-bold">{foodItem.calories} kcal</span>
+                  <span className="font-bold">{foodItem.calories || 0} kcal</span>
                 </div>
               </div>
             </div>
 
-            <p className="text-gray-500 leading-relaxed text-lg italic">"{foodItem.description}"</p>
+            <p className="text-gray-500 leading-relaxed text-lg italic">"{foodItem.description || 'Chưa có mô tả chi tiết'}"</p>
 
-            {/* Nutrition Facts */}
-            <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100 grid grid-cols-4 gap-4">
-              {Object.entries(foodItem.nutrition).map(([key, value]) => (
-                <div key={key} className="text-center space-y-1">
-                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">{key}</p>
-                  <p className="text-lg font-black text-gray-900">{value}</p>
-                </div>
-              ))}
-            </div>
+            {/* Nutrition Facts - Xử lý an toàn nếu BE không trả về */}
+            {foodItem.nutrition && Object.keys(foodItem.nutrition).length > 0 && (
+              <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100 grid grid-cols-4 gap-4">
+                {Object.entries(foodItem.nutrition).map(([key, value]) => (
+                  <div key={key} className="text-center space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">{key}</p>
+                    <p className="text-lg font-black text-gray-900">{value as React.ReactNode}</p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Ingredients & Allergies */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                  <ShieldCheck size={18} className="text-green-500" /> Thành phần chính
-                </h3>
-                <ul className="space-y-2">
-                  {foodItem.ingredients.map(ing => (
-                    <li key={ing} className="text-sm text-gray-500 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" /> {ing}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="space-y-3">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-orange-500" /> Cảnh báo dị ứng
-                </h3>
-                <div className="p-3 bg-orange-50 rounded-2xl border border-orange-100">
-                  <p className="text-xs text-orange-700 font-medium">{foodItem.allergies.join(', ')}</p>
+              {/* Thành phần (Nếu có) */}
+              {(foodItem.ingredients && foodItem.ingredients.length > 0) && (
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <ShieldCheck size={18} className="text-green-500" /> Thành phần chính
+                  </h3>
+                  <ul className="space-y-2">
+                    {/* SỬA LẠI: Đọc ing.name thay vì ing */}
+                    {foodItem.ingredients.map((ing: any, index: number) => (
+                      <li key={index} className="text-sm text-gray-500 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" /> {ing.name}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
+              )}
+
+              {/* Dị ứng (Tự động gom nhóm allergyTags từ các thành phần) */}
+              {foodItem.ingredients && (
+                (() => {
+                  // Gom tất cả các allergyTags từ mảng ingredients lại và lọc trùng nhau
+                  const allAllergies = Array.from(
+                    new Set(foodItem.ingredients.flatMap((ing: any) => ing.allergyTags || []))
+                  );
+
+                  if (allAllergies.length > 0) {
+                    return (
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                          <AlertTriangle size={18} className="text-orange-500" /> Cảnh báo dị ứng
+                        </h3>
+                        <div className="p-3 bg-orange-50 rounded-2xl border border-orange-100">
+                          <p className="text-xs text-orange-700 font-medium">{allAllergies.join(', ')}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
             </div>
 
             {/* Actions */}
