@@ -10,9 +10,14 @@ const api = axios.create({
 // Request Interceptor: Gắn Access Token vào header
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
+    const rawToken = localStorage.getItem('access_token');
+    const token = rawToken?.replace(/^"|"$/g, '').trim();
+
+    // Chỉ gắn header khi token có format JWT hợp lệ để tránh backend trả 422 do token parse lỗi.
+    if (token && token.split('.').length === 3) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else if (rawToken) {
+      localStorage.removeItem('access_token');
     }
     return config;
   },

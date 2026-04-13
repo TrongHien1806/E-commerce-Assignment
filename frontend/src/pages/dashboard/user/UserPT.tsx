@@ -42,7 +42,7 @@ export default function UserPT() {
 
         const [serviceRes, suggestionRes] = await Promise.allSettled([
           api.get('/users/me/pt-services'),
-          api.get('/users/recommendations/pts?limit=12')
+          api.get('/users/recommendations/pts?limit=10')
         ]);
 
         if (serviceRes.status === 'fulfilled') {

@@ -30,8 +30,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Lấy giỏ hàng từ Backend
   const fetchCart = async () => {
-    const token = localStorage.getItem('access_token');
+    const rawToken = localStorage.getItem('access_token');
+    const token = rawToken?.replace(/^"|"$/g, '').trim();
     if (!token) return; // Nếu chưa đăng nhập thì không gọi API giỏ hàng
+
+    // Token cục bộ bị hỏng format thì bỏ qua request để tránh backend trả 422.
+    if (token.split('.').length !== 3) {
+      localStorage.removeItem('access_token');
+      return;
+    }
 
     try {
       const res = await api.get('/cart');
@@ -51,7 +58,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setItems(mappedItems);
         setSubtotal(foodCart.summary?.subtotal || 0);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        setItems([]);
+        setSubtotal(0);
+      }
       console.error('Lỗi khi lấy giỏ hàng:', err);
     }
   };

@@ -232,10 +232,18 @@ export const refreshTokenValidator = validate(
         },
         custom: {
           options: async (value, { req }) => {
-            const decoded_refresh_token = await verifyToken({
-              token: value,
-              secretOrPublicKey: process.env.JWT_SECRET_REFRESH_TOKEN as string
-            })
+            let decoded_refresh_token: TokenPayload
+            try {
+              decoded_refresh_token = await verifyToken({
+                token: value,
+                secretOrPublicKey: process.env.JWT_SECRET_REFRESH_TOKEN as string
+              })
+            } catch {
+              throw new ErrorWithStatus({
+                message: USERS_MESSAGES.REFRESH_TOKEN_NOT_FOUND,
+                status: HTTP_STATUS.UNAUTHORIZED
+              })
+            }
 
             const refreshTokenInDb = await databaseService.refreshTokens.findOne({ token: value })
             if (!refreshTokenInDb) {
@@ -281,10 +289,18 @@ export const accessTokenValidator = validate(
                 status: HTTP_STATUS.UNAUTHORIZED
               })
             }
-            const decoded_authorization = await verifyToken({
-              token: access_token,
-              secretOrPublicKey: process.env.JWT_SECRET_ACCESS_TOKEN as string
-            })
+            let decoded_authorization: TokenPayload
+            try {
+              decoded_authorization = await verifyToken({
+                token: access_token,
+                secretOrPublicKey: process.env.JWT_SECRET_ACCESS_TOKEN as string
+              })
+            } catch {
+              throw new ErrorWithStatus({
+                message: USERS_MESSAGES.ACCESS_TOKEN_IS_INVALID,
+                status: HTTP_STATUS.UNAUTHORIZED
+              })
+            }
             if (decoded_authorization.token_type !== TokenType.AccessToken) {
               throw new ErrorWithStatus({
                 message: USERS_MESSAGES.INVALID_ACCESS_TOKEN_TYPE,
@@ -459,6 +475,23 @@ export const updateMeValidator = validate(
         optional: true,
         isISO8601: {
           errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+        }
+      },
+      avatar: {
+        optional: true,
+        custom: {
+          options: (value) => {
+            if (value === null || value === '') return true
+            if (typeof value !== 'string') {
+              throw new Error(USERS_MESSAGES.VALIDATION_ERROR)
+            }
+
+            const normalized = value.trim()
+            if (!/^https?:\/\//i.test(normalized)) {
+              throw new Error(USERS_MESSAGES.VALIDATION_ERROR)
+            }
+            return true
+          }
         }
       }
     },

@@ -48,6 +48,7 @@ type UserProfile = {
 export default function UserDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardWarning, setDashboardWarning] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<UserOrder[]>([]);
@@ -64,6 +65,15 @@ export default function UserDashboard() {
     startWeight: 0,
     currentWeight: 0
   });
+
+  useEffect(() => {
+    const handleProfileUpdated = () => setRefreshKey((prev) => prev + 1);
+    window.addEventListener('fitbite-profile-updated', handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener('fitbite-profile-updated', handleProfileUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -154,7 +164,7 @@ export default function UserDashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [refreshKey]);
 
   if (isLoading) {
     return (

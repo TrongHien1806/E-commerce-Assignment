@@ -39,12 +39,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const rawToken = localStorage.getItem('access_token');
+    const token = rawToken?.replace(/^"|"$/g, '').trim();
+
+    if (rawToken && (!token || token.split('.').length !== 3)) {
+      localStorage.removeItem('access_token');
+      setLoading(false);
+      return;
+    }
+
     if (token) {
       fetchProfile();
     } else {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const syncProfile = () => {
+      if (localStorage.getItem('access_token')) {
+        fetchProfile();
+      }
+    };
+
+    window.addEventListener('fitbite-profile-updated', syncProfile);
+    return () => window.removeEventListener('fitbite-profile-updated', syncProfile);
   }, []);
 
   const login = async (accessToken: string, refreshToken: string) => {

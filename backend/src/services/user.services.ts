@@ -619,7 +619,8 @@ class UsersService {
   }
 
   async updateMe(user_id: string, payload: UpdateMeReqBody) {
-    const safePayload: { username?: string; phone?: string; date_of_birth?: Date } = {}
+    const safePayload: { username?: string; phone?: string; date_of_birth?: Date; avatar?: string } = {}
+    const unsetPayload: { avatar?: '' } = {}
 
     if (typeof payload.username === 'string') {
       safePayload.username = payload.username.trim()
@@ -633,18 +634,37 @@ class UsersService {
       safePayload.date_of_birth = new Date(payload.date_of_birth)
     }
 
+    if (payload.avatar === null || payload.avatar === '') {
+      unsetPayload.avatar = ''
+    } else if (typeof payload.avatar === 'string') {
+      const normalizedAvatar = payload.avatar.trim()
+      if (normalizedAvatar.length > 0) {
+        safePayload.avatar = normalizedAvatar
+      }
+    }
+
+    const updateDoc: {
+      $set: typeof safePayload
+      $currentDate: { updated_at: true }
+      $unset?: typeof unsetPayload
+    } = {
+      $set: {
+        ...safePayload
+      },
+      $currentDate: {
+        updated_at: true
+      }
+    }
+
+    if (Object.keys(unsetPayload).length > 0) {
+      updateDoc.$unset = unsetPayload
+    }
+
     const updatedUser = await databaseService.users.findOneAndUpdate(
       {
         _id: new ObjectId(user_id)
       },
-      {
-        $set: {
-          ...safePayload
-        },
-        $currentDate: {
-          updated_at: true
-        }
-      },
+      updateDoc,
       {
         returnDocument: 'after',
         projection: {

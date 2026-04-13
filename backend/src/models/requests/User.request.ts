@@ -51,6 +51,7 @@ export interface UpdateMeReqBody {
   username?: string
   phone?: string
   date_of_birth?: string
+  avatar?: string | null
   healthProfile?: HealthProfile
   ptProfile?: PTProfile
 }
