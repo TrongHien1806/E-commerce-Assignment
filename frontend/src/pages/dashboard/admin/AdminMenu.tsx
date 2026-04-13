@@ -1,399 +1,627 @@
-import { useState, useMemo, FormEvent } from 'react';
-import { Search, Plus, MoreVertical, Edit2, Trash2, CheckCircle2, Clock, Truck, ChefHat, ChevronDown, X } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChefHat, Edit2, Loader2, Plus, Search, Trash2, Truck, X } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import api from '@/services/api';
 
-const kitchenOrders = [
-  { 
-    id: 'TXN12', 
-    name: 'Sữa chua Hy Lạp với Ngũ cốc và Mật ong', 
-    qty: 2, 
-    note: 'cay', 
-    status: 'Đang chuẩn bị', 
-    deliveryStatus: 'Chờ giao',
-    image: 'https://picsum.photos/seed/yogurt/100/100'
-  },
-  { 
-    id: 'TXN24', 
-    name: 'Cá hồi nướng Chanh và Măng tây', 
-    qty: 2, 
-    status: 'Đã xác nhận', 
-    deliveryStatus: 'Đang giao',
-    image: 'https://picsum.photos/seed/salmon/100/100'
-  },
-  { 
-    id: 'TXN45', 
-    name: 'Salad Hy Lạp với Phô mai Feta và Oliu', 
-    qty: 1, 
-    name2: 'Salad Diêm mạch với Rau củ nướng và Phô mai Feta',
-    qty2: 2,
-    status: 'Đã xác nhận', 
-    deliveryStatus: 'Đang giao',
-    image: 'https://picsum.photos/seed/salad/100/100'
-  }
-];
+type OrderStatus = 'Pending' | 'Cooking' | 'Delivering' | 'Completed' | 'Cancelled';
 
-const initialFoodItems = [
-  { 
-    id: 'PROD-1013', 
-    name: 'Salad ức gà', 
-    price: '50.000 đ', 
-    status: 'Đang bán', 
-    inventory: 80, 
-    nutrition: { protein: '2.9 kcal / 10.7 gr', carb: 'Carb 5gr / Fat gr' },
-    image: 'https://picsum.photos/seed/salad/100/100'
-  },
-  { 
-    id: 'PROD-1015', 
-    name: 'Cơm gạo lứt thịt heo', 
-    price: '50.000 đ', 
-    status: 'Đang bán', 
-    inventory: 20, 
-    nutrition: { protein: '2.9 kcal / 10.3 gr', carb: 'Carb 3gr / Fat gr' },
-    image: 'https://picsum.photos/seed/rice/100/100'
-  },
-  { 
-    id: 'PROD-1013-2', 
-    name: 'Bánh mì ngũ cốc', 
-    price: '50.000 đ', 
-    status: 'Đã ẩn', 
-    inventory: 3, 
-    nutrition: { protein: '2.9 kcal / 10.3 gr', carb: 'Carb 5gr / Fat gr' },
-    image: 'https://picsum.photos/seed/bread/100/100'
-  },
-  { 
-    id: 'PROD-1013-3', 
-    name: 'Sữa chua yến mạch', 
-    price: '50.000 đ', 
-    status: 'Đã ẩn', 
-    inventory: 6, 
-    nutrition: { protein: '2.9 kcal / 10.3 gr', carb: 'Carb 5gr / Fat gr' },
-    image: 'https://picsum.photos/seed/yogurt/100/100'
-  },
-];
+type FoodItem = {
+  _id: string;
+  name: string;
+  description?: string;
+  details?: string;
+  images?: string[];
+  price: number;
+  calories: number;
+  nutrition?: {
+    protein?: number;
+    carb?: number;
+    fat?: number;
+  };
+  ingredients?: Array<{
+    name?: string;
+    allergyTags?: string[];
+  }>;
+  tags?: string[];
+  stock: number;
+  isActive: boolean;
+  isCombo?: boolean;
+};
+
+type KitchenOrder = {
+  _id: string;
+  status: OrderStatus;
+  deliveryAddress?: string;
+  items?: Array<{ quantity?: number }>;
+  grandTotal?: number;
+  createdAt?: string;
+};
+
+type FoodFormValues = {
+  name: string;
+  description: string;
+  details: string;
+  image: string;
+  price: string;
+  calories: string;
+  stock: string;
+  protein: string;
+  carb: string;
+  fat: string;
+  tags: string;
+  ingredientName: string;
+  allergyTags: string;
+  isCombo: boolean;
+};
+
+const emptyForm: FoodFormValues = {
+  name: '',
+  description: '',
+  details: '',
+  image: '',
+  price: '',
+  calories: '',
+  stock: '',
+  protein: '',
+  carb: '',
+  fat: '',
+  tags: '',
+  ingredientName: '',
+  allergyTags: '',
+  isCombo: false
+};
+
+function parseCsv(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function toPositiveNumber(value: string): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.max(0, num) : 0;
+}
 
 export default function AdminMenu() {
-  const [foodItems, setFoodItems] = useState(initialFoodItems);
+  const [foods, setFoods] = useState<FoodItem[]>([]);
+  const [kitchenOrders, setKitchenOrders] = useState<KitchenOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionFoodId, setActionFoodId] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    id: '',
-    price: '',
-    inventory: '',
-    protein: '',
-    carb: ''
-  });
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
-  const filteredFoodItems = useMemo(() => {
-    return foodItems.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           item.id.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || 
-                           (statusFilter === 'active' && item.status === 'Đang bán') ||
-                           (statusFilter === 'inactive' && item.status === 'Đã ẩn');
-      return matchesSearch && matchesStatus;
-    });
-  }, [foodItems, searchQuery, statusFilter]);
+  const [showModal, setShowModal] = useState(false);
+  const [editFood, setEditFood] = useState<FoodItem | null>(null);
+  const [formData, setFormData] = useState<FoodFormValues>(emptyForm);
 
-  const toggleStatus = (id: string) => {
-    setFoodItems(prev => prev.map(item => 
-      item.id === id 
-        ? { ...item, status: item.status === 'Đang bán' ? 'Đã ẩn' : 'Đang bán' } 
-        : item
-    ));
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setWarning(null);
+
+      const [foodsRes, ordersRes] = await Promise.all([
+        api.get('/foods?page=1&limit=300&sortBy=createdAt&order=desc'),
+        api.get('/orders/all')
+      ]);
+
+      const foodData = Array.isArray(foodsRes.data?.result?.foods) ? foodsRes.data.result.foods : [];
+      const allOrders = Array.isArray(ordersRes.data?.result) ? ordersRes.data.result : [];
+
+      setFoods(foodData);
+      setKitchenOrders(
+        allOrders
+          .filter((order: KitchenOrder) => ['Pending', 'Cooking', 'Delivering'].includes(order.status))
+          .sort((a: KitchenOrder, b: KitchenOrder) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+          .slice(0, 6)
+      );
+    } catch (error: any) {
+      console.error('Loi tai du lieu admin menu:', error);
+      setWarning(error?.response?.data?.message || 'Khong the tai du lieu quan ly bep.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleOpenEdit = (item: any) => {
-    setEditingItem(item);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const filteredFoods = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return foods.filter((item) => {
+      const matchSearch =
+        !query ||
+        item.name.toLowerCase().includes(query) ||
+        item._id.toLowerCase().includes(query) ||
+        (item.tags || []).join(' ').toLowerCase().includes(query);
+
+      const matchStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && item.isActive) ||
+        (statusFilter === 'inactive' && !item.isActive);
+
+      return matchSearch && matchStatus;
+    });
+  }, [foods, searchQuery, statusFilter]);
+
+  const openCreateModal = () => {
+    setEditFood(null);
+    setFormData(emptyForm);
+    setShowModal(true);
+  };
+
+  const openEditModal = (food: FoodItem) => {
+    setEditFood(food);
     setFormData({
-      name: item.name,
-      id: item.id,
-      price: item.price,
-      inventory: item.inventory.toString(),
-      protein: item.nutrition.protein,
-      carb: item.nutrition.carb
+      name: food.name || '',
+      description: food.description || '',
+      details: food.details || '',
+      image: food.images?.[0] || '',
+      price: String(food.price ?? ''),
+      calories: String(food.calories ?? ''),
+      stock: String(food.stock ?? ''),
+      protein: String(food.nutrition?.protein ?? ''),
+      carb: String(food.nutrition?.carb ?? ''),
+      fat: String(food.nutrition?.fat ?? ''),
+      tags: (food.tags || []).join(', '),
+      ingredientName: food.ingredients?.[0]?.name || '',
+      allergyTags: (food.ingredients?.[0]?.allergyTags || []).join(', '),
+      isCombo: Boolean(food.isCombo)
     });
-    setShowEditModal(true);
+    setShowModal(true);
   };
 
-  const handleSaveEdit = (e: FormEvent) => {
-    e.preventDefault();
-    setFoodItems(prev => prev.map(item => 
-      item.id === editingItem.id 
-        ? { 
-            ...item, 
-            name: formData.name,
-            id: formData.id,
-            price: formData.price,
-            inventory: parseInt(formData.inventory) || 0,
-            nutrition: {
-              protein: formData.protein,
-              carb: formData.carb
-            }
-          } 
-        : item
-    ));
-    setShowEditModal(false);
+  const closeModal = () => {
+    setShowModal(false);
+    setEditFood(null);
+    setFormData(emptyForm);
   };
+
+  const buildFoodPayload = () => {
+    const tags = parseCsv(formData.tags);
+    const allergyTags = parseCsv(formData.allergyTags);
+
+    return {
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      details: formData.details.trim(),
+      images: [formData.image.trim() || 'https://picsum.photos/seed/food/600/400'],
+      price: toPositiveNumber(formData.price),
+      calories: toPositiveNumber(formData.calories),
+      nutrition: {
+        protein: toPositiveNumber(formData.protein),
+        carb: toPositiveNumber(formData.carb),
+        fat: toPositiveNumber(formData.fat)
+      },
+      ingredients: [
+        {
+          name: formData.ingredientName.trim() || 'Unknown ingredient',
+          allergyTags
+        }
+      ],
+      tags,
+      stock: Math.floor(toPositiveNumber(formData.stock)),
+      isCombo: formData.isCombo
+    };
+  };
+
+  const handleSave = async (event: FormEvent) => {
+    event.preventDefault();
+
+    try {
+      setIsSubmitting(true);
+      setWarning(null);
+
+      const payload = buildFoodPayload();
+
+      if (editFood?._id) {
+        await api.patch(`/foods/${editFood._id}`, payload);
+      } else {
+        await api.post('/foods', {
+          ...payload,
+          isActive: true
+        });
+      }
+
+      closeModal();
+      await fetchData();
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the luu mon an. Vui long kiem tra du lieu.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async (item: FoodItem) => {
+    try {
+      setActionFoodId(item._id);
+      setWarning(null);
+      await api.patch(`/foods/${item._id}`, { isActive: !item.isActive });
+      setFoods((prev) => prev.map((food) => (food._id === item._id ? { ...food, isActive: !food.isActive } : food)));
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the cap nhat trang thai mon an.');
+    } finally {
+      setActionFoodId(null);
+    }
+  };
+
+  const handleSoftDelete = async (item: FoodItem) => {
+    try {
+      setActionFoodId(item._id);
+      setWarning(null);
+      await api.delete(`/foods/${item._id}`);
+      setFoods((prev) => prev.map((food) => (food._id === item._id ? { ...food, isActive: false } : food)));
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the an mon an nay.');
+    } finally {
+      setActionFoodId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-[#fafafa]">
+        <Sidebar role="admin" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="animate-spin text-orange-500" size={40} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="admin" />
-      <div className="flex-1 flex flex-col">
-        <Header title="Quản lý Bếp & Giao hàng" userName="NGÔ MỸ LAN" userRole="Quản trị viên" hideSearch={true} />
-        
-        <main className="p-8 space-y-10 overflow-y-auto">
-          {/* Kitchen & Delivery Section */}
-          <section className="space-y-6">
-            <h2 className="text-xl font-black text-gray-900">Màn hình bếp & Theo dõi giao hàng</h2>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {kitchenOrders.map((order) => (
-                <div key={order.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-50 flex gap-4 relative">
-                  <img src={order.image} alt={order.name} className="w-20 h-20 rounded-2xl object-cover" referrerPolicy="no-referrer" />
-                  <div className="flex-1 space-y-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-sm font-bold text-gray-900 pr-8">{order.name}</h3>
-                      <span className="text-xs font-black text-gray-400">x{order.qty}</span>
-                    </div>
-                    {order.name2 && (
-                      <div className="flex justify-between items-start">
-                        <h3 className="text-sm font-bold text-gray-900 pr-8">{order.name2}</h3>
-                        <span className="text-xs font-black text-gray-400">x{order.qty2}</span>
-                      </div>
-                    )}
-                    {order.note && <p className="text-[10px] font-bold text-gray-400 italic">Ghi chú: {order.note}</p>}
-                    <p className="text-[10px] font-black text-gray-900">Mã đơn {order.id}</p>
-                    <p className="text-[10px] font-bold text-gray-400">{order.status === 'Đang chuẩn bị' ? 'Đang chuẩn bị...' : 'Đang nấu...'}</p>
-                    
-                    <div className="flex gap-2 mt-4">
-                      <span className={cn(
-                        "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider",
-                        order.status === 'Đang chuẩn bị' ? "bg-blue-500 text-white" : "bg-blue-500 text-white"
-                      )}>
-                        {order.status === 'Đang chuẩn bị' ? 'ĐANG NẤU' : 'ĐÃ XÁC NHẬN'}
-                      </span>
-                      <span className={cn(
-                        "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider",
-                        order.deliveryStatus === 'Chờ giao' ? "bg-red-100 text-red-500" : 
-                        order.deliveryStatus === 'Đang giao' ? (order.status === 'Đã xác nhận' ? "bg-blue-100 text-blue-500" : "bg-red-100 text-red-500") : ""
-                      )}>
-                        {order.deliveryStatus === 'Chờ giao' ? 'CHỜ GIAO' : 'ĐANG GIAO'}
-                      </span>
-                    </div>
-                  </div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header title="Quan ly Bep va Mon an" userRole="Quan tri vien" hideSearch={true} />
+
+        <main className="p-8 space-y-8 overflow-y-auto min-w-0">
+          {warning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {warning}
+            </div>
+          ) : null}
+
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-gray-900">Man hinh bep va giao hang</h2>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Don dang xu ly: {kitchenOrders.length}</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {kitchenOrders.length === 0 ? (
+                <div className="col-span-full rounded-3xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+                  Chua co don nao trong hang doi bep/giao.
                 </div>
-              ))}
+              ) : (
+                kitchenOrders.map((order) => {
+                  const quantity = (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+                  return (
+                    <article key={order._id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-gray-900">Order #{order._id.slice(-6).toUpperCase()}</p>
+                          <p className="text-xs text-gray-500">{order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : 'N/A'}</p>
+                        </div>
+                        <span
+                          className={cn(
+                            'px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider',
+                            order.status === 'Pending' && 'bg-amber-100 text-amber-700',
+                            order.status === 'Cooking' && 'bg-blue-100 text-blue-600',
+                            order.status === 'Delivering' && 'bg-indigo-100 text-indigo-700'
+                          )}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                        <p className="inline-flex items-center gap-1"><ChefHat size={14} /> So mon: <span className="font-bold text-gray-900">{quantity}</span></p>
+                        <p className="inline-flex items-center gap-1"><Truck size={14} /> Tong tien: <span className="font-bold text-gray-900">{Math.round(order.grandTotal || 0).toLocaleString('vi-VN')} d</span></p>
+                      </div>
+
+                      <p className="text-xs text-gray-500 line-clamp-2">Dia chi: {order.deliveryAddress || 'Chua co dia chi giao hang'}</p>
+                    </article>
+                  );
+                })
+              )}
             </div>
           </section>
 
-          {/* Food Management Section */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900 uppercase">Quản lý món ăn</h2>
-              <div className="flex items-center gap-4">
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h2 className="text-xl font-black text-gray-900 uppercase">Quan ly mon an</h2>
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="Tìm kiếm..." 
+                  <input
+                    type="text"
+                    placeholder="Tim ten mon, ID, tag..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c1e06d]/20"
+                    className="h-11 w-72 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/10"
                   />
                 </div>
-                <div className="relative">
-                  <select 
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none pl-4 pr-10 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c1e06d]/20 font-medium text-gray-600"
-                  >
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="active">Đang bán (Active)</option>
-                    <option value="inactive">Đã ẩn (Inactive)</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
-                </div>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                  className="h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 outline-none focus:ring-2 focus:ring-orange-500/10"
+                >
+                  <option value="all">Tat ca trang thai</option>
+                  <option value="active">Dang ban</option>
+                  <option value="inactive">Da an</option>
+                </select>
+
+                <Button type="button" onClick={openCreateModal} className="h-11 rounded-xl bg-[#c1e06d] text-gray-900 font-black hover:bg-[#b1d05d]">
+                  <Plus size={16} className="mr-2" /> Them mon
+                </Button>
               </div>
             </div>
-            
-            <div className="bg-white rounded-[40px] shadow-sm border border-gray-50 overflow-hidden">
-              <table className="w-full text-left border-collapse">
+
+            <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 overflow-hidden">
+              <table className="w-full min-w-[1100px] text-left border-collapse">
                 <thead>
-                  <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50 bg-gray-50/30">
-                    <th className="p-6">Sản phẩm gần đây</th>
-                    <th className="p-6">Giá bán</th>
-                    <th className="p-6">Dinh dưỡng</th>
-                    <th className="p-6">Tồn kho</th>
-                    <th className="p-6">Trạng thái (Status)</th>
-                    <th className="p-6">Thao tác</th>
+                  <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/40">
+                    <th className="px-6 py-4">Mon an</th>
+                    <th className="px-6 py-4">Gia</th>
+                    <th className="px-6 py-4">Dinh duong</th>
+                    <th className="px-6 py-4">Ton kho</th>
+                    <th className="px-6 py-4">Trang thai</th>
+                    <th className="px-6 py-4">Thao tac</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filteredFoodItems.map((item) => (
-                    <tr key={item.id} className="group hover:bg-gray-50/50 transition-colors">
-                      <td className="p-6">
-                        <div className="flex items-center gap-3">
-                          <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-cover" referrerPolicy="no-referrer" />
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">{item.name}</p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">{item.id}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-6 text-sm font-black text-gray-900">{item.price}</td>
-                      <td className="p-6">
-                        <div className="space-y-0.5">
-                          <p className="text-[10px] text-gray-900 font-bold">
-                            <span className="text-gray-900">Protein</span> / {item.nutrition.protein}
-                          </p>
-                          <p className="text-[10px] text-gray-500 font-medium">
-                            Carbin / {item.nutrition.carb}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="p-6 text-sm font-bold text-gray-500">{item.inventory}</td>
-                      <td className="p-6">
-                        <span className={cn(
-                          "px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-wider inline-block min-w-[100px] text-center",
-                          item.status === 'Đang bán' ? "bg-green-100 text-green-600" : "bg-gray-200 text-gray-500"
-                        )}>
-                          {item.status === 'Đang bán' ? 'ĐANG BÁN' : 'ĐÃ ẨN'}
-                        </span>
-                      </td>
-                      <td className="p-6">
-                        <div className="flex items-center gap-4">
-                          <button 
-                            onClick={() => toggleStatus(item.id)}
-                            className={cn(
-                              "relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none",
-                              item.status === 'Đang bán' ? "bg-[#c1e06d]" : "bg-gray-300"
-                            )}
-                          >
-                            <div className={cn(
-                              "absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200",
-                              item.status === 'Đang bán' ? "translate-x-6" : "translate-x-0"
-                            )} />
-                          </button>
-                          <button 
-                            onClick={() => handleOpenEdit(item)}
-                            className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                        </div>
+                  {filteredFoods.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500 font-medium">
+                        Khong tim thay mon an phu hop.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredFoods.map((item) => {
+                      const isActing = actionFoodId === item._id;
+
+                      return (
+                        <tr key={item._id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={item.images?.[0] || 'https://picsum.photos/seed/food/120/120'}
+                                alt={item.name}
+                                className="w-12 h-12 rounded-xl object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                              <div>
+                                <p className="text-sm font-bold text-gray-900">{item.name}</p>
+                                <p className="text-[11px] text-gray-400">{item._id}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-black text-gray-900">
+                            {Math.round(item.price || 0).toLocaleString('vi-VN')} d
+                          </td>
+                          <td className="px-6 py-4 text-xs text-gray-600 space-y-1">
+                            <p>Protein: <span className="font-bold text-gray-900">{item.nutrition?.protein ?? 0}g</span></p>
+                            <p>Carb: <span className="font-bold text-gray-900">{item.nutrition?.carb ?? 0}g</span></p>
+                            <p>Fat: <span className="font-bold text-gray-900">{item.nutrition?.fat ?? 0}g</span></p>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-700">{item.stock}</td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={cn(
+                                'px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider',
+                                item.isActive ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
+                              )}
+                            >
+                              {item.isActive ? 'Dang ban' : 'Da an'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={isActing}
+                                onClick={() => handleToggleStatus(item)}
+                                className={cn(
+                                  'relative w-12 h-6 rounded-full transition-colors duration-200 disabled:opacity-50',
+                                  item.isActive ? 'bg-[#c1e06d]' : 'bg-gray-300'
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200',
+                                    item.isActive ? 'translate-x-6' : 'translate-x-0'
+                                  )}
+                                />
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={isActing}
+                                onClick={() => openEditModal(item)}
+                                className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-50"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={isActing || !item.isActive}
+                                onClick={() => handleSoftDelete(item)}
+                                className="p-2 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-40"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
-            {filteredFoodItems.length === 0 && (
-              <div className="text-center py-20">
-                <p className="text-gray-400 font-bold">Không tìm thấy món ăn phù hợp...</p>
-              </div>
-            )}
           </section>
         </main>
       </div>
 
-      {/* Edit Modal */}
-      {showEditModal && (
+      {showModal ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEditModal(false)} />
-          <div className="relative bg-white rounded-[40px] shadow-2xl max-w-lg w-full p-8 space-y-8 animate-in fade-in zoom-in duration-300">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
+          <div className="relative bg-white rounded-[32px] shadow-2xl max-w-3xl w-full p-7 space-y-6 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-black text-gray-900">Chỉnh sửa món ăn</h3>
-              <button onClick={() => setShowEditModal(false)} className="p-2 text-gray-400 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition-all">
-                <X size={24} />
+              <h3 className="text-2xl font-black text-gray-900">{editFood ? 'Chinh sua mon an' : 'Them mon an moi'}</h3>
+              <button type="button" onClick={closeModal} className="p-2 text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100">
+                <X size={22} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tên món ăn</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-[#c1e06d] focus:bg-white rounded-2xl outline-none transition-all font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mã sản phẩm</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.id}
-                    onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-[#c1e06d] focus:bg-white rounded-2xl outline-none transition-all font-bold" 
-                  />
-                </div>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  required
+                  placeholder="Ten mon an"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="Gia (VND)"
+                  value={formData.price}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Giá bán</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-[#c1e06d] focus:bg-white rounded-2xl outline-none transition-all font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tồn kho</label>
-                  <input 
-                    type="number" 
-                    required
-                    value={formData.inventory}
-                    onChange={(e) => setFormData({ ...formData, inventory: e.target.value })}
-                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-[#c1e06d] focus:bg-white rounded-2xl outline-none transition-all font-bold" 
-                  />
-                </div>
+              <textarea
+                required
+                rows={3}
+                placeholder="Mo ta ngan"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+              />
+
+              <textarea
+                rows={2}
+                placeholder="Thong tin chi tiet (optional)"
+                value={formData.details}
+                onChange={(e) => setFormData((prev) => ({ ...prev, details: e.target.value }))}
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input
+                  type="text"
+                  required
+                  placeholder="Calories"
+                  value={formData.calories}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, calories: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="Ton kho"
+                  value={formData.stock}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, stock: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+                <input
+                  type="text"
+                  placeholder="Image URL"
+                  value={formData.image}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
               </div>
 
-              <div className="space-y-4">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Thông số dinh dưỡng</p>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-400">Protein / Calories / Gram</label>
-                    <input 
-                      type="text" 
-                      value={formData.protein}
-                      onChange={(e) => setFormData({ ...formData, protein: e.target.value })}
-                      placeholder="VD: 2.9 kcal / 10.7 gr"
-                      className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-[#c1e06d] focus:bg-white rounded-2xl outline-none transition-all font-bold text-sm" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-400">Carbin / Carb / Fat</label>
-                    <input 
-                      type="text" 
-                      value={formData.carb}
-                      onChange={(e) => setFormData({ ...formData, carb: e.target.value })}
-                      placeholder="VD: Carb 5gr / Fat gr"
-                      className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-[#c1e06d] focus:bg-white rounded-2xl outline-none transition-all font-bold text-sm" 
-                    />
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input
+                  type="text"
+                  required
+                  placeholder="Protein (g)"
+                  value={formData.protein}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, protein: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="Carb (g)"
+                  value={formData.carb}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, carb: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="Fat (g)"
+                  value={formData.fat}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, fat: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
               </div>
 
-              <Button type="submit" className="w-full py-8 bg-[#c1e06d] text-gray-900 rounded-3xl font-black text-lg shadow-xl shadow-[#c1e06d]/20 hover:bg-[#b1d05d] hover:scale-[1.02] active:scale-95 transition-all">
-                Lưu chỉnh sửa
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Tags (phay ngan cach)"
+                  value={formData.tags}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+                <label className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={formData.isCombo}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, isCombo: e.target.checked }))}
+                  />
+                  Mon combo
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Nguyen lieu chinh"
+                  value={formData.ingredientName}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, ingredientName: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+                <input
+                  type="text"
+                  placeholder="Allergy tags (phay ngan cach)"
+                  value={formData.allergyTags}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, allergyTags: e.target.value }))}
+                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-12 bg-[#c1e06d] text-gray-900 rounded-2xl font-black hover:bg-[#b1d05d] disabled:opacity-60"
+              >
+                {isSubmitting ? 'Dang luu...' : editFood ? 'Luu chinh sua' : 'Tao mon an'}
               </Button>
             </form>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

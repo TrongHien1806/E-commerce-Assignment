@@ -1,156 +1,237 @@
-import { useState, useMemo } from 'react';
-import { 
-  Search, 
-  Clock, 
-  Truck, 
-  ChefHat, 
-  CheckCircle2, 
-  MoreVertical,
-  Filter,
-  ArrowRight
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, ChefHat, Loader2, Search, Truck, XCircle } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import { cn } from '@/lib/utils';
+import api from '@/services/api';
 
-const initialOrders = [
-  { id: 'ORD-1234', customer: 'Nguyễn Văn An', items: ['Salad ức gà x2', 'Nước ép cam'], status: 'Pending', time: '10:30 AM', total: '150.000 đ' },
-  { id: 'ORD-1235', customer: 'Trần Thị Bình', items: ['Cơm gạo lứt thịt heo'], status: 'Cooking', time: '10:45 AM', total: '65.000 đ' },
-  { id: 'ORD-1236', customer: 'Lê Văn Cường', items: ['Bánh mì ngũ cốc x3'], status: 'Delivering', time: '11:00 AM', total: '120.000 đ' },
-  { id: 'ORD-1237', customer: 'Phạm Minh Đức', items: ['Sữa chua yến mạch'], status: 'Completed', time: '09:15 AM', total: '45.000 đ' },
-  { id: 'ORD-1238', customer: 'Hoàng Anh Tuấn', items: ['Salad ức gà', 'Cơm thịt bò'], status: 'Pending', time: '11:15 AM', total: '115.000 đ' },
-];
+type OrderStatus = 'Pending' | 'Cooking' | 'Delivering' | 'Completed' | 'Cancelled';
 
-const columns = [
-  { id: 'Pending', title: 'Chờ xử lý', icon: <Clock size={18} />, color: 'bg-orange-500' },
-  { id: 'Cooking', title: 'Đang chế biến', icon: <ChefHat size={18} />, color: 'bg-blue-500' },
-  { id: 'Delivering', title: 'Đang giao hàng', icon: <Truck size={18} />, color: 'bg-purple-500' },
-  { id: 'Completed', title: 'Hoàn tất', icon: <CheckCircle2 size={18} />, color: 'bg-green-500' },
-];
+type AdminOrder = {
+  _id: string;
+  userId?: string;
+  status: OrderStatus;
+  packageType?: 'ONE_DAY' | 'WEEKLY_7D';
+  subtotal?: number;
+  shippingFee?: number;
+  grandTotal?: number;
+  createdAt?: string;
+  payment?: {
+    method?: 'COD' | 'VNPay' | 'MoMo';
+    status?: 'Pending' | 'Paid' | 'Failed';
+  };
+};
+
+const statusOrder: OrderStatus[] = ['Pending', 'Cooking', 'Delivering', 'Completed', 'Cancelled'];
+
+const statusLabel: Record<OrderStatus, string> = {
+  Pending: 'Cho xu ly',
+  Cooking: 'Dang che bien',
+  Delivering: 'Dang giao',
+  Completed: 'Hoan tat',
+  Cancelled: 'Da huy'
+};
+
+function nextStatus(current: OrderStatus): 'Cooking' | 'Delivering' | 'Completed' | null {
+  if (current === 'Pending') return 'Cooking';
+  if (current === 'Cooking') return 'Delivering';
+  if (current === 'Delivering') return 'Completed';
+  return null;
+}
 
 export default function AdminOrders() {
-  const [orders, setOrders] = useState(initialOrders);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActingOrderId, setIsActingOrderId] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+
+  const fetchOrders = async () => {
+    try {
+      setIsLoading(true);
+      setWarning(null);
+      const res = await api.get('/orders/all');
+      const data = Array.isArray(res.data?.result) ? res.data.result : [];
+      setOrders(data);
+    } catch (error: any) {
+      console.error('Loi tai danh sach order admin:', error);
+      setWarning(error?.response?.data?.message || 'Khong the tai danh sach don hang.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter(order => 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.items.some(item => item.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return orders;
+
+    return orders.filter((order) => {
+      const idMatch = order._id.toLowerCase().includes(query);
+      const userMatch = (order.userId || '').toLowerCase().includes(query);
+      const paymentMethodMatch = (order.payment?.method || '').toLowerCase().includes(query);
+      return idMatch || userMatch || paymentMethodMatch;
+    });
   }, [orders, searchQuery]);
 
-  const moveOrder = (orderId: string, newStatus: string) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+  const groupedOrders = useMemo(() => {
+    const map: Record<OrderStatus, AdminOrder[]> = {
+      Pending: [],
+      Cooking: [],
+      Delivering: [],
+      Completed: [],
+      Cancelled: []
+    };
+
+    for (const order of filteredOrders) {
+      map[order.status].push(order);
+    }
+
+    for (const key of statusOrder) {
+      map[key].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    }
+
+    return map;
+  }, [filteredOrders]);
+
+  const handleMoveNext = async (order: AdminOrder) => {
+    const next = nextStatus(order.status);
+    if (!next) return;
+
+    try {
+      setIsActingOrderId(order._id);
+      setWarning(null);
+      await api.patch(`/orders/${order._id}/status`, { status: next });
+      setOrders((prev) => prev.map((item) => (item._id === order._id ? { ...item, status: next } : item)));
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the cap nhat trang thai don hang.');
+    } finally {
+      setIsActingOrderId(null);
+    }
   };
+
+  const handleCancel = async (order: AdminOrder) => {
+    if (order.status === 'Cancelled' || order.status === 'Completed') return;
+
+    try {
+      setIsActingOrderId(order._id);
+      setWarning(null);
+      await api.patch(`/orders/${order._id}/cancel`);
+      setOrders((prev) => prev.map((item) => (item._id === order._id ? { ...item, status: 'Cancelled' } : item)));
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the huy don hang nay.');
+    } finally {
+      setIsActingOrderId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-[#fafafa]">
+        <Sidebar role="admin" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="animate-spin text-orange-500" size={40} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="admin" />
-      <div className="flex-1 flex flex-col">
-        <Header title="Quản lý Đơn hàng" userRole="Quản trị viên" hideSearch={true} />
-        
-        <main className="p-8 space-y-8 overflow-y-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Tìm mã đơn, khách hàng..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c1e06d]/20 w-80"
-                />
-              </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all">
-                <Filter size={16} />
-                Bộ lọc
-              </button>
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header title="Quản lý đơn hàng" userRole="Quản trị viên" hideSearch={true} />
+
+        <main className="p-8 space-y-6 overflow-y-auto min-w-0">
+          {warning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {warning}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cập nhật thời gian thực đang bật</span>
-            </div>
+          ) : null}
+
+          <div className="relative group w-full md:w-[28rem]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-600 transition-colors" size={18} />
+            <input
+              type="text"
+              placeholder="Tìm theo mã đơn, userId, phương thức thanh toán..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-6 h-12 bg-white border border-gray-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-orange-600/10 transition-all"
+            />
           </div>
 
-          {/* Kanban Board */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[600px]">
-            {columns.map((column) => (
-              <div key={column.id} className="flex flex-col gap-4">
-                <div className="flex items-center justify-between px-2">
-                  <div className="flex items-center gap-2">
-                    <div className={cn("w-2 h-2 rounded-full", column.color)} />
-                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">{column.title}</h3>
-                    <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {filteredOrders.filter(o => o.status === column.id).length}
-                    </span>
-                  </div>
-                  <button className="text-gray-400 hover:text-gray-900">
-                    <MoreVertical size={16} />
-                  </button>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {statusOrder.map((status) => (
+              <section key={status} className="bg-white rounded-[24px] border border-gray-100 shadow-sm p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-black text-gray-900 uppercase tracking-wider">{statusLabel[status]}</h2>
+                  <span className="px-2 py-1 rounded-lg bg-gray-100 text-[10px] font-black text-gray-600">
+                    {groupedOrders[status].length}
+                  </span>
                 </div>
 
-                <div className="flex-1 bg-gray-100/50 rounded-[32px] p-4 space-y-4 border-2 border-dashed border-gray-200">
-                  {filteredOrders.filter(o => o.status === column.id).map((order) => (
-                    <div 
-                      key={order.id} 
-                      className="bg-white p-5 rounded-2xl shadow-sm border border-gray-50 space-y-4 group hover:shadow-md transition-all cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-1 rounded-lg uppercase tracking-wider">
-                          {order.id}
-                        </span>
-                        <span className="text-[10px] font-bold text-gray-400">{order.time}</span>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <p className="text-sm font-black text-gray-900">{order.customer}</p>
-                        <div className="space-y-0.5">
-                          {order.items.map((item, i) => (
-                            <p key={i} className="text-[10px] font-medium text-gray-500">• {item}</p>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                        <p className="text-sm font-black text-gray-900">{order.total}</p>
-                        <div className="flex gap-1">
-                          {column.id === 'Pending' && (
-                            <button 
-                              onClick={() => moveOrder(order.id, 'Cooking')}
-                              className="p-2 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
-                              title="Chuyển sang Chế biến"
-                            >
-                              <ArrowRight size={14} />
-                            </button>
-                          )}
-                          {column.id === 'Cooking' && (
-                            <button 
-                              onClick={() => moveOrder(order.id, 'Delivering')}
-                              className="p-2 bg-purple-50 text-purple-500 rounded-xl hover:bg-purple-500 hover:text-white transition-all"
-                              title="Chuyển sang Giao hàng"
-                            >
-                              <ArrowRight size={14} />
-                            </button>
-                          )}
-                          {column.id === 'Delivering' && (
-                            <button 
-                              onClick={() => moveOrder(order.id, 'Completed')}
-                              className="p-2 bg-green-50 text-green-500 rounded-xl hover:bg-green-500 hover:text-white transition-all"
-                              title="Hoàn tất đơn hàng"
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                <div className="space-y-3">
+                  {groupedOrders[status].length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 text-center">
+                      Chua co don hang.
                     </div>
-                  ))}
+                  ) : (
+                    groupedOrders[status].map((order) => {
+                      const next = nextStatus(order.status);
+                      const isActing = isActingOrderId === order._id;
+
+                      return (
+                        <article key={order._id} className="rounded-2xl border border-gray-100 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-black text-gray-900">Order #{order._id.slice(-6).toUpperCase()}</p>
+                              <p className="text-[11px] text-gray-500">User: {order.userId || 'N/A'}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-black text-gray-900">{Math.round(order.grandTotal || 0).toLocaleString('vi-VN')} đ</p>
+                              <p className="text-[10px] text-gray-500">{order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : 'N/A'}</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-600">
+                            <p>Goi: <span className="font-bold text-gray-800">{order.packageType || 'ONE_DAY'}</span></p>
+                            <p>Thanh toan: <span className="font-bold text-gray-800">{order.payment?.method || 'N/A'}</span></p>
+                            <p>Payment status: <span className="font-bold text-gray-800">{order.payment?.status || 'Pending'}</span></p>
+                            <p>Shipping: <span className="font-bold text-gray-800">{Math.round(order.shippingFee || 0).toLocaleString('vi-VN')} đ</span></p>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {next ? (
+                              <button
+                                type="button"
+                                disabled={isActing}
+                                onClick={() => handleMoveNext(order)}
+                                className="inline-flex items-center gap-2 px-3 h-9 rounded-xl bg-blue-600 text-white text-xs font-black disabled:opacity-50"
+                              >
+                                {next === 'Cooking' ? <ChefHat size={14} /> : next === 'Delivering' ? <Truck size={14} /> : <CheckCircle2 size={14} />}
+                                Chuyen sang {statusLabel[next]}
+                              </button>
+                            ) : null}
+
+                            {(order.status !== 'Completed' && order.status !== 'Cancelled') ? (
+                              <button
+                                type="button"
+                                disabled={isActing}
+                                onClick={() => handleCancel(order)}
+                                className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 text-xs font-black disabled:opacity-50"
+                              >
+                                <XCircle size={14} /> Huy don
+                              </button>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    })
+                  )}
                 </div>
-              </div>
+              </section>
             ))}
           </div>
         </main>
