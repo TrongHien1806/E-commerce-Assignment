@@ -1,150 +1,89 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  MessageSquare, 
-  Utensils, 
-  BookOpen, 
-  Users, 
-  LogOut,
-  User,
-  Settings,
-  ShoppingBag,
-  BarChart3,
-  CreditCard,
-  DollarSign,
-  Receipt,
-  PieChart,
-  ClipboardList,
-  TrendingUp,
-  TrendingDown
+  LayoutDashboard, Utensils, Users, ClipboardList, 
+  Settings, LogOut, ShoppingBag, BarChart3, MessageSquare 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 interface SidebarProps {
-  role: 'user' | 'admin' | 'pt';
+  role?: 'admin' | 'pt' | 'user' | 'Admin' | 'PT' | 'Customer';
 }
 
 export default function Sidebar({ role }: SidebarProps) {
+  const { user, logout } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    // Clear any auth tokens/state here
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    navigate('/');
-  };
+  // 1. Định nghĩa menu cho Khách hàng
+  const customerLinks = [
+    { icon: LayoutDashboard, label: 'Tổng quan', path: '/dashboard/user' },
+    { icon: Utensils, label: 'Thực đơn của tôi', path: '/dashboard/menu' },
+    { icon: ClipboardList, label: 'Nhật ký thực phẩm', path: '/dashboard/diary' },
+    { icon: Users, label: 'Huấn luyện viên', path: '/dashboard/pt' },
+  ];
 
-  const menuItems = {
-    user: [
-      { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard/user' },
-      { name: 'Thực đơn sức khỏe', icon: <Utensils size={20} />, path: '/dashboard/menu' },
-      { name: 'Nhật ký thực phẩm', icon: <BookOpen size={20} />, path: '/dashboard/diary' },
-      { name: 'Huấn luyện viên', icon: <Users size={20} />, path: '/dashboard/pt' },
-    ],
-    admin: [
-      { name: 'Báo cáo Thống kê', icon: <BarChart3 size={20} />, path: '/dashboard/admin/analytics' },
-      { name: 'Quản lý món ăn', icon: <Utensils size={20} />, path: '/dashboard/admin/menu' },
-      { name: 'Quản lý PT', icon: <Users size={20} />, path: '/dashboard/admin/pt' },
-      { name: 'Quản lý Đơn hàng', icon: <ClipboardList size={20} />, path: '/dashboard/admin/orders' },
-      { 
-        type: 'group',
-        name: 'Quản lý Tài chính',
-        icon: <DollarSign size={20} />,
-        items: [
-          { name: 'Doanh thu', icon: <TrendingUp size={16} />, path: '/dashboard/admin/finance/revenue' },
-          { name: 'Chi phí', icon: <TrendingDown size={16} />, path: '/dashboard/admin/finance/expenses' },
-          { name: 'Báo cáo Lãi/Lỗ', icon: <PieChart size={16} />, path: '/dashboard/admin' },
-          { name: 'Thanh toán PT', icon: <CreditCard size={16} />, path: '/dashboard/admin/finance/payouts' },
-          { name: 'Hóa đơn & GD', icon: <Receipt size={16} />, path: '/dashboard/admin/finance/transactions' },
-        ]
-      }
-    ],
-    pt: [
-      { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard/pt-view' },
-      { name: 'Thực đơn', icon: <Utensils size={20} />, path: '/dashboard/pt/menu' },
-      { name: 'Hồ sơ học viên', icon: <User size={20} />, path: '/dashboard/pt/profile' },
-    ]
-  };
+  // 2. Định nghĩa menu cho PT
+  const ptLinks = [
+    { icon: LayoutDashboard, label: 'Dashboard PT', path: '/dashboard/pt-view' },
+    { icon: Utensils, label: 'Quản lý thực đơn', path: '/dashboard/pt/menu' },
+    { icon: MessageSquare, label: 'Học viên & Chat', path: '/dashboard/pt/chat' },
+  ];
 
-  const currentMenu = menuItems[role];
+  // 3. Định nghĩa menu cho Admin
+  const adminLinks = [
+    { icon: LayoutDashboard, label: 'Quản trị hệ thống', path: '/dashboard/admin' },
+    { icon: Users, label: 'Quản lý người dùng', path: '/dashboard/admin/users' },
+    { icon: ShoppingBag, label: 'Quản lý đơn hàng', path: '/dashboard/admin/orders' },
+    { icon: BarChart3, label: 'Thống kê tài chính', path: '/dashboard/admin/analytics' },
+  ];
+
+  const normalizedRole = role?.toLowerCase() === 'admin'
+    ? 'Admin'
+    : role?.toLowerCase() === 'pt'
+      ? 'PT'
+      : role?.toLowerCase() === 'user'
+        ? 'Customer'
+        : user?.role;
+
+  // Lựa chọn bộ menu dựa trên Role
+  const activeLinks = normalizedRole === 'Admin' ? adminLinks : normalizedRole === 'PT' ? ptLinks : customerLinks;
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-gray-50 flex flex-col sticky top-0 overflow-y-auto">
-      <div className="p-8">
+    <aside className="w-64 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0">
+      <div className="p-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-            <Utensils size={20} />
+          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+            <Utensils className="text-white" size={20} />
           </div>
-          <span className="text-2xl font-black text-gray-900 tracking-tighter">FitBite</span>
+          <span className="text-xl font-black text-gray-900 italic">FitBite</span>
         </Link>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2">
-        {currentMenu.map((item: any, idx: number) => {
-          if (item.type === 'group') {
-            return (
-              <div key={idx} className="space-y-1 pt-4">
-                <div className="px-4 py-2 flex items-center gap-3 text-gray-400">
-                  {item.icon}
-                  <span className="text-[10px] font-black uppercase tracking-widest">{item.name}</span>
-                </div>
-                {item.items.map((subItem: any) => (
-                  <Link
-                    key={subItem.path}
-                    to={subItem.path}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group",
-                      location.pathname === subItem.path
-                        ? "bg-[#c1e06d]/20 text-gray-900 border border-[#c1e06d]/30"
-                        : "text-gray-400 hover:text-gray-900 hover:bg-gray-50"
-                    )}
-                  >
-                    <span className={cn(
-                      "transition-colors",
-                      location.pathname === subItem.path ? "text-gray-900" : "text-gray-400 group-hover:text-gray-900"
-                    )}>
-                      {subItem.icon}
-                    </span>
-                    <span className="text-xs font-bold">{subItem.name}</span>
-                  </Link>
-                ))}
-              </div>
-            );
-          }
-
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group",
-                location.pathname === item.path
-                  ? "bg-[#c1e06d] text-gray-900 shadow-lg shadow-[#c1e06d]/20"
-                  : "text-gray-400 hover:text-gray-900 hover:bg-gray-50"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <span className={cn(
-                  "transition-colors",
-                  location.pathname === item.path ? "text-gray-900" : "text-gray-400 group-hover:text-gray-900"
-                )}>
-                  {item.icon}
-                </span>
-                <span className="text-sm font-bold">{item.name}</span>
-              </div>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-4 space-y-1">
+        {activeLinks.map((link) => (
+          <Link
+            key={link.path}
+            to={link.path}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+              location.pathname === link.path
+                ? "bg-orange-50 text-orange-500"
+                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+            )}
+          >
+            <link.icon size={20} />
+            {link.label}
+          </Link>
+        ))}
       </nav>
 
-      <div className="p-6">
+      <div className="p-4 border-t border-gray-50">
         <button 
-          onClick={handleLogout}
-          className="w-full mt-6 flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
         >
           <LogOut size={20} />
-          <span className="text-sm font-bold">Logout</span>
+          Đăng xuất
         </button>
       </div>
     </aside>

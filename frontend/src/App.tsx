@@ -90,14 +90,6 @@ function AppRoutes() {
 
           {/* Customer Routes */}
           <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['Customer']}>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/dashboard/user"
             element={
               <ProtectedRoute allowedRoles={['Customer']}>

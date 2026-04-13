@@ -1,355 +1,261 @@
-import { useState } from 'react';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
-  MoreVertical, 
-  Clock, 
-  MapPin,
-  CheckCircle2,
-  AlertCircle,
-  Users,
-  X,
-  Calendar as CalendarIcon
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2, Users, ClipboardList, Clock } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import { cn } from '@/lib/utils';
+import api from '@/services/api';
 
-const schedule = [
-  { id: 1, student: 'Nguyễn Văn B', time: '09:00 - 10:20', day: 'CN', color: 'bg-blue-50 text-blue-600 border-blue-100' },
-  { id: 2, student: 'Nguyễn Văn A', time: '10:30 - 11:50', day: 'T3', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
-  { id: 3, student: 'Nguyễn Văn C', time: '12:30 - 13:50', day: 'T4', color: 'bg-cyan-50 text-cyan-600 border-cyan-100' },
-  { id: 4, student: 'Lớp Yoga Sáng', time: '05:00 - 06:30', day: 'T2', color: 'bg-orange-50 text-orange-600 border-orange-100' },
-  { id: 5, student: 'Gym Tối', time: '20:00 - 21:30', day: 'T5', color: 'bg-purple-50 text-purple-600 border-purple-100' },
-];
+type PTService = {
+  _id: string;
+  title: string;
+  sessions: number;
+  durationDays: number;
+  price: number;
+  isActive: boolean;
+};
 
-const students = [
-  { name: 'Nguyễn Văn A', gender: 'Nam', date: '25/01/2026', startTime: '10:00', endTime: '11:30', location: 'Studio A', status: 'Completed' },
-  { name: 'Trần Thị B', gender: 'Nữ', date: '05/02/2026', startTime: '14:00', endTime: '15:30', location: 'Cơ sở B', status: 'Completed' },
-  { name: 'Lê Văn C', gender: 'Nam', date: '10/03/2026', startTime: '13:00', endTime: '14:30', location: 'Phòng tập 1', status: 'Upcoming' },
-  { name: 'Phạm Minh D', gender: 'Nam', date: '02/04/2026', startTime: '09:45', endTime: '11:15', location: 'Sảnh B', status: 'Upcoming' },
-];
+type ClientRegistration = {
+  serviceId?: string;
+  remainingSessions?: number;
+  totalSessions?: number;
+  registeredAt?: string;
+};
 
-const months = [
-  'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-  'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
-];
+type PTClient = {
+  _id: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  registeredPTServices?: ClientRegistration[];
+};
 
-const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-const dates = [14, 15, 16, 17, 18, 19, 20];
-const HOUR_HEIGHT = 64;
+type PTUserProfile = {
+  username?: string;
+  email?: string;
+};
 
 export default function PTDashboard() {
-  const [currentMonth, setCurrentMonth] = useState(3); // April
-  const [showMonthSelect, setShowMonthSelect] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showAllStudents, setShowAllStudents] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [services, setServices] = useState<PTService[]>([]);
+  const [clients, setClients] = useState<PTClient[]>([]);
+  const [profile, setProfile] = useState<PTUserProfile | null>(null);
 
-  const parseTime = (timeStr: string) => {
-    const [start, end] = timeStr.split(' - ');
-    const [sH, sM] = start.split(':').map(Number);
-    const [eH, eM] = end.split(':').map(Number);
-    return { sH, sM, eH, eM };
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setWarning(null);
+
+        const [servicesRes, clientsRes, meRes] = await Promise.allSettled([
+          api.get('/pt/services?limit=100&page=1'),
+          api.get('/pt/clients'),
+          api.get('/users/me')
+        ]);
+
+        if (servicesRes.status === 'fulfilled') {
+          const items = servicesRes.value.data?.result?.services;
+          setServices(Array.isArray(items) ? items : []);
+        }
+
+        if (clientsRes.status === 'fulfilled') {
+          const items = clientsRes.value.data?.result;
+          setClients(Array.isArray(items) ? items : []);
+        } else {
+          setWarning('Không tải được danh sách học viên từ hệ thống.');
+        }
+
+        if (meRes.status === 'fulfilled') {
+          setProfile(meRes.value.data?.result || null);
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải PT dashboard:', error);
+        setWarning('Có lỗi xảy ra khi tải dữ liệu dashboard PT.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const serviceMap = useMemo(() => {
+    const map = new Map<string, PTService>();
+    for (const service of services) {
+      map.set(service._id, service);
+    }
+    return map;
+  }, [services]);
+
+  const clientRows = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      clientName: string;
+      clientContact: string;
+      serviceTitle: string;
+      remaining: number;
+      total: number;
+      registeredAt: string;
+    }> = [];
+
+    for (const client of clients) {
+      const registrations = Array.isArray(client.registeredPTServices) ? client.registeredPTServices : [];
+
+      for (const reg of registrations) {
+        if (!reg?.serviceId || !serviceMap.has(reg.serviceId)) continue;
+
+        const service = serviceMap.get(reg.serviceId);
+        rows.push({
+          key: `${client._id}-${reg.serviceId}`,
+          clientName: client.username || 'Khách hàng',
+          clientContact: client.email || client.phone || 'N/A',
+          serviceTitle: service?.title || 'Gói PT',
+          remaining: Number(reg.remainingSessions || 0),
+          total: Number(reg.totalSessions || 0),
+          registeredAt: reg.registeredAt ? new Date(reg.registeredAt).toLocaleDateString('vi-VN') : 'N/A'
+        });
+      }
+    }
+
+    return rows.sort((a, b) => a.clientName.localeCompare(b.clientName));
+  }, [clients, serviceMap]);
+
+  const kpis = useMemo(() => {
+    const activeRows = clientRows.filter((row) => row.remaining > 0).length;
+    return {
+      totalServices: services.length,
+      totalClients: clients.length,
+      activeEnrollments: activeRows
+    };
+  }, [clientRows, clients.length, services.length]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-[#fafafa]">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="animate-spin text-orange-500" size={40} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
-      <Sidebar role="pt" />
-      
-      <div className="flex-1 flex flex-col">
-        <Header title="Quản lý ca học" userRole="Huấn luyện viên" avatar="https://i.pravatar.cc/150?u=pt" hideSearch={true} />
-        
-        <main className="p-8 space-y-10 overflow-y-auto">
-          {/* Calendar View */}
-          <section className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-50 space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900">Lịch dạy của tôi</h2>
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <button 
-                    onClick={() => setShowMonthSelect(!showMonthSelect)}
-                    className="flex items-center bg-gray-50 hover:bg-gray-100 transition-colors rounded-xl px-4 py-2 gap-4"
-                  >
-                    <span className="text-sm font-bold text-gray-900">{months[currentMonth]}</span>
-                    <ChevronDown size={14} className="text-gray-400" />
-                  </button>
-                  
-                  {showMonthSelect && (
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-30 grid grid-cols-1 max-h-64 overflow-y-auto">
-                      {months.map((month, idx) => (
-                        <button
-                          key={month}
-                          onClick={() => {
-                            setCurrentMonth(idx);
-                            setShowMonthSelect(false);
-                          }}
-                          className={cn(
-                            "w-full text-left px-4 py-2 rounded-xl text-sm font-bold transition-colors",
-                            currentMonth === idx ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
-                          )}
-                        >
-                          {month}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button 
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-200"
-                >
-                  <Plus size={18} />
-                  Thêm ca dạy
-                </button>
-              </div>
+      <Sidebar />
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header
+          title="Dashboard PT"
+          userName={profile?.username || 'Huấn luyện viên'}
+          userRole="Huấn luyện viên"
+          hideSearch={true}
+        />
+
+        <main className="p-8 space-y-8 overflow-y-auto min-w-0">
+          {warning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {warning}
             </div>
+          ) : null}
 
-            <div className="space-y-0 border border-gray-100 rounded-3xl overflow-hidden">
-              {/* Days Header */}
-              <div className="grid grid-cols-[80px_1fr] bg-gray-50 border-b border-gray-100">
-                <div className="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-center border-r border-gray-100">Thời gian</div>
-                <div className="grid grid-cols-7">
-                  {days.map((day, i) => (
-                    <div key={day} className={cn(
-                      "text-center py-4 space-y-1 border-r border-gray-100 last:border-r-0",
-                      day === 'T3' ? "bg-blue-50/50" : ""
-                    )}>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{dates[i]}</p>
-                      <p className={cn(
-                        "text-xs font-black",
-                        day === 'T3' ? "text-blue-600" : "text-gray-900"
-                      )}>{day}</p>
-                    </div>
-                  ))}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <article className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <ClipboardList size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gói dịch vụ</p>
+                  <p className="text-2xl font-black text-gray-900">{kpis.totalServices}</p>
                 </div>
               </div>
+            </article>
 
-              {/* Time Slots Scrollable Area */}
-              <div className="max-h-[600px] overflow-y-auto relative">
-                <div className="grid grid-cols-[80px_1fr]">
-                  {/* Time Column */}
-                  <div className="bg-gray-50/30 border-r border-gray-100">
-                    {Array.from({ length: 24 }).map((_, hour) => (
-                      <div key={hour} style={{ height: HOUR_HEIGHT }} className="flex items-start justify-center pt-2 border-b border-gray-50 last:border-b-0">
-                        <span className="text-[10px] font-bold text-gray-300">{hour.toString().padStart(2, '0')}:00</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Grid and Sessions */}
-                  <div className="relative">
-                    {/* Grid Lines */}
-                    <div className="absolute inset-0 grid grid-cols-7 pointer-events-none">
-                      {days.map((day) => (
-                        <div key={day} className="border-r border-gray-50 last:border-r-0" />
-                      ))}
-                    </div>
-                    {Array.from({ length: 24 }).map((_, hour) => (
-                      <div key={hour} style={{ height: HOUR_HEIGHT }} className="border-b border-gray-50 last:border-b-0" />
-                    ))}
-
-                    {/* Booked Sessions */}
-                    <div className="absolute inset-0 grid grid-cols-7 pointer-events-none">
-                      {schedule.map((session) => {
-                        const { sH, sM, eH, eM } = parseTime(session.time);
-                        const top = (sH * HOUR_HEIGHT) + (sM / 60 * HOUR_HEIGHT);
-                        const duration = (eH * 60 + eM) - (sH * 60 + sM);
-                        const height = (duration / 60) * HOUR_HEIGHT;
-                        const dayIndex = days.indexOf(session.day);
-
-                        return (
-                          <div 
-                            key={session.id}
-                            className="absolute pointer-events-auto px-1"
-                            style={{
-                              top: `${top}px`,
-                              height: `${height}px`,
-                              left: `${(dayIndex / 7) * 100}%`,
-                              width: `${100 / 7}%`,
-                            }}
-                          >
-                            <div className={cn(
-                              "h-full w-full p-2 rounded-xl border shadow-sm flex flex-col justify-between overflow-hidden transition-transform hover:scale-[1.02] cursor-pointer",
-                              session.color
-                            )}>
-                              <div>
-                                <p className="text-[10px] font-black leading-tight">{session.student}</p>
-                                <div className="flex items-center gap-1 mt-0.5 opacity-70">
-                                  <Clock size={8} />
-                                  <span className="text-[8px] font-bold">{session.time.split(' - ')[0]}</span>
-                                </div>
-                              </div>
-                              {height > 40 && (
-                                <div className="flex items-center gap-1 opacity-60">
-                                  <MapPin size={8} />
-                                  <span className="text-[8px] font-medium">Studio A</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+            <article className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Học viên</p>
+                  <p className="text-2xl font-black text-gray-900">{kpis.totalClients}</p>
                 </div>
               </div>
+            </article>
+
+            <article className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Đăng ký còn buổi</p>
+                  <p className="text-2xl font-black text-gray-900">{kpis.activeEnrollments}</p>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+            <h2 className="text-xl font-black text-gray-900">Danh sách gói PT của hệ thống</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {services.length === 0 ? (
+                <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm font-medium text-gray-500">
+                  Chưa có gói dịch vụ PT nào.
+                </div>
+              ) : (
+                services.map((service) => (
+                  <article key={service._id} className="rounded-2xl border border-gray-100 p-5 bg-gray-50/70">
+                    <p className="text-sm font-black text-gray-900">{service.title}</p>
+                    <div className="mt-3 space-y-1 text-xs font-semibold text-gray-500">
+                      <p>Số buổi: {service.sessions}</p>
+                      <p>Thời hạn: {service.durationDays} ngày</p>
+                      <p>Giá: {Math.round(service.price || 0).toLocaleString('vi-VN')} đ</p>
+                      <p>Trạng thái: {service.isActive ? 'Đang mở bán' : 'Đã ẩn'}</p>
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
           </section>
 
-          {/* Student List */}
-          <section className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-50 space-y-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Users size={24} className="text-gray-900" />
-                <h2 className="text-xl font-black text-gray-900">Danh sách học viên</h2>
-              </div>
-              <button 
-                onClick={() => setShowAllStudents(!showAllStudents)}
-                className="text-sm font-bold text-blue-500 hover:underline flex items-center gap-1"
-              >
-                {showAllStudents ? 'Thu gọn' : 'Xem tất cả'} <ChevronRight size={16} className={cn("transition-transform", showAllStudents && "rotate-90")} />
-              </button>
-            </div>
-
+          <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+            <h2 className="text-xl font-black text-gray-900">Học viên đăng ký gói PT của bạn</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full min-w-[760px] text-left">
                 <thead>
-                  <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50">
-                    <th className="pb-4 font-bold">Họ tên</th>
-                    <th className="pb-4 font-bold text-center">Giới tính</th>
-                    <th className="pb-4 font-bold">Ngày tập</th>
-                    <th className="pb-4 font-bold">Bắt đầu</th>
-                    <th className="pb-4 font-bold">Kết thúc</th>
-                    <th className="pb-4 font-bold">Địa điểm</th>
-                    <th className="pb-4 font-bold">Trạng thái</th>
-                    <th className="pb-4 font-bold"></th>
+                  <tr className="border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <th className="pb-4">Học viên</th>
+                    <th className="pb-4">Liên hệ</th>
+                    <th className="pb-4">Gói PT</th>
+                    <th className="pb-4">Buổi còn lại</th>
+                    <th className="pb-4">Đăng ký</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {(showAllStudents ? students : students.slice(0, 3)).map((student, i) => (
-                    <tr key={i} className="group hover:bg-gray-50/50 transition-colors">
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                            {student.name.split(' ').pop()?.[0]}
-                          </div>
-                          <span className="text-sm font-bold text-gray-900">{student.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 text-center">
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-md text-[10px] font-bold",
-                          student.gender === 'Nam' ? "bg-blue-50 text-blue-500" : "bg-pink-50 text-pink-500"
-                        )}>
-                          {student.gender}
-                        </span>
-                      </td>
-                      <td className="py-4 text-sm font-medium text-gray-500">{student.date}</td>
-                      <td className="py-4 text-sm font-black text-gray-900">{student.startTime}</td>
-                      <td className="py-4 text-sm font-black text-gray-900">{student.endTime}</td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-500">
-                          <MapPin size={14} className="text-gray-300" />
-                          {student.location}
-                        </div>
-                      </td>
-                      <td className="py-4">
-                        <span className={cn(
-                          "px-3 py-1 rounded-lg text-[10px] font-bold inline-flex items-center gap-1",
-                          student.status === 'Completed' 
-                            ? "bg-green-50 text-green-600" 
-                            : "bg-blue-50 text-blue-600"
-                        )}>
-                          {student.status === 'Completed' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                          {student.status === 'Completed' ? 'Hoàn thành' : 'Sắp tới'}
-                        </span>
-                      </td>
-                      <td className="py-4 text-right">
-                        <button className="p-2 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all">
-                          <MoreVertical size={18} />
-                        </button>
+                  {clientRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-sm font-medium text-gray-500">
+                        Chưa có học viên nào đăng ký gói của bạn.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    clientRows.map((row) => (
+                      <tr key={row.key} className="hover:bg-gray-50/60 transition-colors">
+                        <td className="py-4 text-sm font-bold text-gray-900">{row.clientName}</td>
+                        <td className="py-4 text-sm text-gray-500">{row.clientContact}</td>
+                        <td className="py-4 text-sm font-semibold text-gray-700">{row.serviceTitle}</td>
+                        <td className="py-4 text-sm font-black text-gray-900">{row.remaining}/{row.total}</td>
+                        <td className="py-4 text-sm text-gray-500">{row.registeredAt}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </section>
         </main>
       </div>
-
-      {/* Add Event Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-white rounded-[40px] shadow-2xl max-w-md w-full p-8 space-y-8 animate-in fade-in zoom-in duration-300">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-black text-gray-900">Thêm ca dạy mới</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 text-gray-400 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition-all">
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tên học viên / Lớp</label>
-                <input type="text" placeholder="Nhập tên..." className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ngày</label>
-                  <div className="relative">
-                    <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input type="date" className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Địa điểm</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input type="text" placeholder="Studio..." className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Bắt đầu</label>
-                  <input type="time" className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Kết thúc</label>
-                  <input type="time" className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
-                </div>
-              </div>
-
-              <button className="w-full py-5 bg-blue-600 text-white rounded-3xl font-black text-lg shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all">
-                Lưu ca dạy
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-  );
-}
-
-function ChevronDown({ size, className }: { size: number, className?: string }) {
-  return (
-    <svg 
-      width={size} 
-      height={size} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="m6 9 6 6 6-6"/>
-    </svg>
   );
 }

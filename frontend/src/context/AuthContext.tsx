@@ -25,19 +25,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const fetchProfile = async () => {
     try {
-      console.log("👉 1. Bắt đầu gọi API /users/me...");
       const response = await api.get('/users/me');
-      
-      console.log("👉 2. Dữ liệu BE trả về nguyên bản:", response.data);
 
-      // Sửa lại cách lấy dữ liệu cho linh hoạt (đề phòng BE trả về tên key khác)
       const userData = response.data.result || response.data.user || response.data;
-      
-      console.log("👉 3. Dữ liệu sẽ lưu vào User State:", userData);
       setUser(userData);
 
     } catch (error: any) {
-      console.error('🚨 LỖI TẠI ĐÂY LÀM VĂNG RA TRANG LOGIN:', error.response?.data || error.message);
+        console.error('Không thể tải hồ sơ người dùng:', error.response?.data || error.message);
       logout(); 
     } finally {
       setLoading(false);

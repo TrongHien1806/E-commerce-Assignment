@@ -8,15 +8,15 @@ import { useCart } from '@/context/CartContext';
 export default function Cart() {
   const { items, updateQty, removeItem, subtotal } = useCart();
 
-  // Tính tổng calo
   const totalCalories = items.reduce((acc, item) => acc + (item.calories || 0) * item.qty, 0);
-  const estimatedShipping = 20000; // Phí ship dự kiến
+
+  const shippingFee = 20000;
 
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-32 text-center space-y-6">
+        <div className="max-w-7xl mx-auto px-4 py-20 text-center space-y-6">
           <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
             <ShoppingBag size={48} />
           </div>
@@ -25,7 +25,7 @@ export default function Cart() {
             <p className="text-gray-500">Hãy chọn những món ăn dinh dưỡng cho hôm nay nhé!</p>
           </div>
           <Link to="/food-catalog">
-            <Button className="rounded-2xl px-8 h-12">Khám phá thực đơn</Button>
+            <Button className="rounded-2xl px-8">Khám phá thực đơn</Button>
           </Link>
         </div>
       </div>
@@ -35,92 +35,89 @@ export default function Cart() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
-        <h1 className="text-3xl font-black text-gray-900 mb-8">Giỏ hàng của bạn</h1>
-
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Giỏ hàng của bạn</h1>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Danh sách món */}
+          {/* Items List */}
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence>
               {items.map((item) => (
-                <motion.div 
+                <motion.div
                   key={item.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95, x: -20 }}
-                  className="bg-white p-4 rounded-[24px] border border-gray-100 flex gap-4 items-center group"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4"
                 >
-                  <div className="w-24 h-24 rounded-[16px] overflow-hidden bg-gray-50 shrink-0">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  <img 
+                    src={item.image} 
+                    alt={item.name} 
+                    className="w-20 h-20 rounded-2xl object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 truncate">{item.name}</h3>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm font-bold text-orange-500">{item.price.toLocaleString('vi-VN')}đ</span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Flame size={12} /> {item.calories} kcal
+                      </span>
+                    </div>
                   </div>
                   
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 line-clamp-1">{item.name}</h3>
-                    <div className="flex items-center gap-4 mt-1">
-                      <p className="text-orange-500 font-black">{item.price.toLocaleString('vi-VN')}đ</p>
-                      <div className="flex items-center gap-1 text-gray-400 text-xs font-bold">
-                        <Flame size={14} /> {item.calories || 0} kcal
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3 bg-gray-50 p-1.5 rounded-xl">
-                      <button 
-                        onClick={() => updateQty(item.id, -1)}
-                        className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-500 hover:text-orange-500 transition-colors"
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <span className="w-6 text-center font-bold text-sm">{item.qty}</span>
-                      <button 
-                        onClick={() => updateQty(item.id, 1)}
-                        className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-500 hover:text-orange-500 transition-colors"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                    
+                  <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl">
                     <button 
-                      onClick={() => removeItem(item.id)}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      onClick={() => updateQty(item.id, -1)}
+                      className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-orange-500 transition-colors"
                     >
-                      <Trash2 size={20} />
+                      <Minus size={16} />
+                    </button>
+                    <span className="w-4 text-center font-bold text-sm">{item.qty}</span>
+                    <button 
+                      onClick={() => updateQty(item.id, 1)}
+                      className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-orange-500 transition-colors"
+                    >
+                      <Plus size={16} />
                     </button>
                   </div>
+                  
+                  <button 
+                    onClick={() => removeItem(item.id)}
+                    className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={20} />
+                  </button>
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
 
-          {/* Tóm tắt đơn hàng */}
-          <div>
-            <div className="bg-white rounded-[32px] border border-gray-100 p-6 sticky top-24 space-y-6">
-              <h2 className="text-xl font-black text-gray-900">Tóm tắt đơn hàng</h2>
+          {/* Summary */}
+          <div className="space-y-6">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
+              <h3 className="text-xl font-bold text-gray-900">Tổng kết đơn hàng</h3>
               
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-gray-500">
-                  <span>Tạm tính ({items.length} món)</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Tạm tính</span>
                   <span className="font-bold text-gray-900">{subtotal.toLocaleString('vi-VN')}đ</span>
                 </div>
-                
-                <div className="flex items-center justify-between text-gray-500">
-                  <span>Phí giao hàng (Dự kiến)</span>
-                  <span className="font-bold text-gray-900">{estimatedShipping.toLocaleString('vi-VN')}đ</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Phí giao hàng</span>
+                  <span className="font-bold text-gray-900">{shippingFee.toLocaleString('vi-VN')}đ</span>
                 </div>
-
-                {/* Phần hiển thị Tổng Calo được bổ sung */}
                 <div className="flex justify-between text-sm pt-4 border-t border-gray-50">
                   <span className="text-gray-500">Tổng Calo</span>
                   <span className="font-bold text-orange-500 flex items-center gap-1">
                     <Flame size={16} /> {totalCalories} kcal
                   </span>
                 </div>
-
-                <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-lg">
+                <div className="flex justify-between text-xl pt-4 border-t border-gray-100">
                   <span className="font-bold text-gray-900">Tổng cộng</span>
-                  <span className="font-black text-orange-500">{(subtotal + estimatedShipping).toLocaleString('vi-VN')}đ</span>
+                  <span className="font-black text-orange-500">{(subtotal + shippingFee).toLocaleString('vi-VN')}đ</span>
                 </div>
               </div>
 
@@ -142,8 +139,8 @@ export default function Cart() {
               </div>
 
               <Link to="/checkout">
-                <Button className="w-full h-14 text-lg rounded-2xl shadow-lg shadow-orange-200 mt-4">
-                  Tiến hành thanh toán <ArrowRight size={20} className="ml-2" />
+                <Button className="w-full h-14 text-lg rounded-2xl shadow-lg shadow-orange-200">
+                  Thanh toán ngay <ArrowRight size={20} className="ml-2" />
                 </Button>
               </Link>
             </div>
