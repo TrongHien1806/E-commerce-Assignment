@@ -745,6 +745,13 @@ class UsersService {
   }
 
   async updateUserStatus(targetUserId: string, status: AccountStatus) {
+    if (!ObjectId.isValid(targetUserId)) {
+      throw new ErrorWithStatus({
+        message: 'ID người dùng không hợp lệ',
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
     const targetObjectId = new ObjectId(targetUserId)
 
     const user = await databaseService.users.findOne({ _id: targetObjectId })

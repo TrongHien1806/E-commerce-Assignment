@@ -639,6 +639,33 @@ export const recommendPTQueryValidator = validate(
   )
 )
 
+export const updateUserStatusValidator = validate(
+  checkSchema(
+    {
+      user_id: {
+        in: ['params'],
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.USER_ID_IS_REQUIRED
+        },
+        isMongoId: {
+          errorMessage: USERS_MESSAGES.USER_ID_MUST_BE_A_STRING
+        }
+      },
+      status: {
+        in: ['body'],
+        notEmpty: {
+          errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+        },
+        isIn: {
+          options: [['Active', 'Locked']],
+          errorMessage: USERS_MESSAGES.VALIDATION_ERROR
+        }
+      }
+    },
+    ['params', 'body']
+  )
+)
+
 export const debugValidator = (req: Request, res: Response, next: NextFunction) => {
   console.log('Debug Validator - Request Body:', req.body)
   console.log('Debug Validator - Request Headers:', req.headers)

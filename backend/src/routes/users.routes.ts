@@ -15,7 +15,8 @@ import {
   swapMealRecommendationValidator,
   updateMeValidator,
   updatePTProfileValidator,
-  isAdminValidator
+  isAdminValidator,
+  updateUserStatusValidator
 } from '~/middlewares/users.middlewares'
 import {
   checkEmailExistController,
@@ -187,6 +188,7 @@ usersRouter.patch(
   '/:user_id/status',
   accessTokenValidator,
   isAdminValidator, // Chỉ Admin mới được khóa tài khoản
+  updateUserStatusValidator,
   wrapRequestHandler(updateUserStatusController)
 )
 
