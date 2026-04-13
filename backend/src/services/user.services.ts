@@ -593,6 +593,13 @@ class UsersService {
   }
 
   async approvePTAccount(targetUserId: string) {
+    if (!ObjectId.isValid(targetUserId)) {
+      throw new ErrorWithStatus({
+        message: 'ID người dùng không hợp lệ',
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
     const targetObjectId = new ObjectId(targetUserId)
 
     const user = await databaseService.users.findOne({ _id: targetObjectId })
@@ -604,13 +611,22 @@ class UsersService {
       throw new ErrorWithStatus({ message: 'Người dùng này không phải là PT', status: HTTP_STATUS.BAD_REQUEST })
     }
 
-    // Cập nhật trường approvedByAdmin thành true
+    const nextPTProfile: PTProfile = {
+      experienceYears: user.ptProfile?.experienceYears ?? 0,
+      specialties: user.ptProfile?.specialties ?? [],
+      rating: user.ptProfile?.rating ?? 0,
+      portfolioImages: user.ptProfile?.portfolioImages ?? [],
+      approvedByAdmin: true
+    }
+
+    // Đảm bảo ptProfile luôn là object hợp lệ để tránh lỗi khi profile cũ bị null
     await databaseService.users.updateOne(
       { _id: targetObjectId },
       { 
         $set: { 
           account_status: AccountStatus.ACTIVE,
-          'ptProfile.approvedByAdmin': true },
+          ptProfile: nextPTProfile
+        },
         $currentDate: { updated_at: true } 
       }
     )

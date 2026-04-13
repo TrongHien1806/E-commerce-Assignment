@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChefHat, Edit2, Loader2, Plus, Search, Trash2, Truck, X } from 'lucide-react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChefHat, Edit2, Loader2, Plus, Search, Trash2, Truck, Upload, X } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import { cn } from '@/lib/utils';
@@ -91,6 +91,7 @@ export default function AdminMenu() {
   const [kitchenOrders, setKitchenOrders] = useState<KitchenOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [actionFoodId, setActionFoodId] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
 
@@ -211,6 +212,43 @@ export default function AdminMenu() {
       stock: Math.floor(toPositiveNumber(formData.stock)),
       isCombo: formData.isCombo
     };
+  };
+
+  const handleImageFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setWarning('Vui long chon dung file anh.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setWarning('Anh vuot qua 5MB. Vui long chon file nho hon.');
+      return;
+    }
+
+    try {
+      setIsImageUploading(true);
+      setWarning(null);
+
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+
+      const uploadRes = await api.post('/medias/upload-image', uploadData);
+      const uploadedUrl = uploadRes.data?.result?.[0];
+
+      if (!uploadedUrl || typeof uploadedUrl !== 'string') {
+        throw new Error('Upload thanh cong nhung khong nhan duoc URL anh.');
+      }
+
+      setFormData((prev) => ({ ...prev, image: uploadedUrl }));
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || error?.message || 'Khong the upload anh mon an.');
+    } finally {
+      setIsImageUploading(false);
+      event.target.value = '';
+    }
   };
 
   const handleSave = async (event: FormEvent) => {
@@ -540,14 +578,33 @@ export default function AdminMenu() {
                   onChange={(e) => setFormData((prev) => ({ ...prev, stock: e.target.value }))}
                   className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
                 />
-                <input
-                  type="text"
-                  placeholder="Image URL"
-                  value={formData.image}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
-                  className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Image URL"
+                    value={formData.image}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
+                    className="h-12 w-full px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
+                  />
+                  <label className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 cursor-pointer">
+                    <Upload size={14} />
+                    {isImageUploading ? 'Dang upload...' : 'Upload anh tu may'}
+                    <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" disabled={isImageUploading} />
+                  </label>
+                </div>
               </div>
+
+              {formData.image ? (
+                <div className="rounded-xl border border-gray-200 p-3 bg-gray-50">
+                  <p className="text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Xem truoc anh</p>
+                  <img
+                    src={formData.image}
+                    alt="Food preview"
+                    className="w-full h-44 rounded-xl object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              ) : null}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <input
@@ -613,10 +670,10 @@ export default function AdminMenu() {
 
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isImageUploading}
                 className="w-full h-12 bg-[#c1e06d] text-gray-900 rounded-2xl font-black hover:bg-[#b1d05d] disabled:opacity-60"
               >
-                {isSubmitting ? 'Dang luu...' : editFood ? 'Luu chinh sua' : 'Tao mon an'}
+                {isImageUploading ? 'Dang upload anh...' : isSubmitting ? 'Dang luu...' : editFood ? 'Luu chinh sua' : 'Tao mon an'}
               </Button>
             </form>
           </div>
