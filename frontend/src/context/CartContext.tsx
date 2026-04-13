@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '@/services/api';
 
 interface CartItem {
@@ -24,21 +24,39 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const getValidStoredToken = () => {
+  const rawToken = localStorage.getItem('access_token');
+  const token = rawToken?.replace(/^"|"$/g, '').trim();
+
+  if (!token || token.split('.').length !== 3) {
+    if (rawToken) localStorage.removeItem('access_token');
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload?.exp && payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      return null;
+    }
+  } catch {
+    localStorage.removeItem('access_token');
+    return null;
+  }
+
+  return token;
+};
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [subtotal, setSubtotal] = useState(0);
+  const initializedRef = useRef(false);
 
   // Lấy giỏ hàng từ Backend
   const fetchCart = async () => {
-    const rawToken = localStorage.getItem('access_token');
-    const token = rawToken?.replace(/^"|"$/g, '').trim();
+    const token = getValidStoredToken();
     if (!token) return; // Nếu chưa đăng nhập thì không gọi API giỏ hàng
-
-    // Token cục bộ bị hỏng format thì bỏ qua request để tránh backend trả 422.
-    if (token.split('.').length !== 3) {
-      localStorage.removeItem('access_token');
-      return;
-    }
 
     try {
       const res = await api.get('/cart');
@@ -68,6 +86,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     fetchCart();
   }, []);
 

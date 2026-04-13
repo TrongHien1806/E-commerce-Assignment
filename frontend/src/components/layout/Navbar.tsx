@@ -1,20 +1,35 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Menu, X, Utensils, Users, LayoutDashboard } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { cartCount } = useCart();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navLinks = [
     { name: 'Thực đơn', path: '/food-catalog', icon: <Utensils size={18} /> },
     { name: 'Huấn luyện viên', path: '/pt-directory', icon: <Users size={18} /> },
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
   ];
+
+  const dashboardPath =
+    user?.role === 'Admin'
+      ? '/dashboard/admin'
+      : user?.role === 'PT'
+      ? '/dashboard/pt-view'
+      : '/dashboard/user';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
@@ -55,16 +70,31 @@ export default function Navbar() {
                 </span>
               )}
             </Link>
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
-                Đăng nhập
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm" className="hidden sm:flex">
-                Đăng ký
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to={dashboardPath}>
+                  <Button variant="ghost" size="sm" className="hidden sm:flex">
+                    Dashboard
+                  </Button>
+                </Link>
+                <Button size="sm" className="hidden sm:flex" onClick={handleLogout}>
+                  Đăng xuất
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm" className="hidden sm:flex">
+                    Đăng nhập
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm" className="hidden sm:flex">
+                    Đăng ký
+                  </Button>
+                </Link>
+              </>
+            )}
             <div className="md:hidden">
               <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -97,12 +127,31 @@ export default function Navbar() {
             </Link>
           ))}
           <div className="pt-4 flex gap-2">
-            <Link to="/login" className="flex-1">
-              <Button variant="outline" className="w-full rounded-xl">Đăng nhập</Button>
-            </Link>
-            <Link to="/register" className="flex-1">
-              <Button className="w-full rounded-xl">Đăng ký</Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to={dashboardPath} className="flex-1" onClick={() => setIsOpen(false)}>
+                  <Button variant="outline" className="w-full rounded-xl">Dashboard</Button>
+                </Link>
+                <Button
+                  className="flex-1 rounded-xl"
+                  onClick={() => {
+                    setIsOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  Đăng xuất
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="flex-1">
+                  <Button variant="outline" className="w-full rounded-xl">Đăng nhập</Button>
+                </Link>
+                <Link to="/register" className="flex-1">
+                  <Button className="w-full rounded-xl">Đăng ký</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

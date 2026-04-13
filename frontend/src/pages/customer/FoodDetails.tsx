@@ -7,13 +7,24 @@ import Navbar from '@/components/layout/Navbar';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import api from '@/services/api'; 
+import ReviewSection from '@/components/customer/ReviewSection';
+import { useAuth } from '@/context/AuthContext';
+
+type UserOrder = {
+  status?: string;
+  items?: Array<{
+    itemId?: string;
+  }>;
+};
 
 export default function FoodDetails() {
   const { id } = useParams();
   const [qty, setQty] = useState(1);
   const { addItem } = useCart();
+  const { isAuthenticated } = useAuth();
   const [foodItem, setFoodItem] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [canReviewFood, setCanReviewFood] = useState(false);
 
   useEffect(() => {
     const fetchFoodItem = async () => {
@@ -33,6 +44,32 @@ export default function FoodDetails() {
       fetchFoodItem();
     }
   }, [id]);
+
+  useEffect(() => {
+    const fetchReviewEligibility = async () => {
+      if (!isAuthenticated || !id) {
+        setCanReviewFood(false);
+        return;
+      }
+
+      try {
+        const res = await api.get('/orders');
+        const orders = Array.isArray(res.data?.result) ? (res.data.result as UserOrder[]) : [];
+
+        const eligible = orders.some((order) => {
+          if (order.status !== 'Completed') return false;
+          const items = Array.isArray(order.items) ? order.items : [];
+          return items.some((item) => String(item.itemId || '') === String(id));
+        });
+
+        setCanReviewFood(eligible);
+      } catch {
+        setCanReviewFood(false);
+      }
+    };
+
+    fetchReviewEligibility();
+  }, [id, isAuthenticated]);
 
   const handleAddToCart = () => {
     if (!foodItem) return;
@@ -102,6 +139,9 @@ export default function FoodDetails() {
           <div className="space-y-8">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
+                {foodItem.isCombo ? (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider">Combo tuần</span>
+                ) : null}
                 <span className="px-3 py-1 bg-orange-100 text-orange-600 text-xs font-bold rounded-full uppercase tracking-wider">Bán chạy nhất</span>
                 <div className="flex items-center gap-1 text-yellow-500">
                   <CheckCircle2 size={16} />
@@ -204,6 +244,15 @@ export default function FoodDetails() {
             </div>
           </div>
         </div>
+
+        <ReviewSection
+          sectionId="review"
+          targetType="Food"
+          targetId={String(foodItem._id || '')}
+          title={foodItem.isCombo ? 'Đánh giá combo' : 'Đánh giá món ăn'}
+          canCreateReview={canReviewFood}
+          createBlockedReason="Chỉ được đánh giá món đã có trong đơn hàng hoàn thành của bạn."
+        />
       </main>
     </div>
   );

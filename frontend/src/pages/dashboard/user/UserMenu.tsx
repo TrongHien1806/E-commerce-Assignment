@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Plus, Flame, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Flame, ShoppingCart, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/Button';
@@ -95,10 +95,11 @@ export default function UserMenu() {
         <main className="flex-1 overflow-y-auto p-8 relative">
           
           {/* Header & Search */}
+          <div className="mb-6 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800">
+            Mẹo: bấm vào từng món, kéo xuống cuối trang chi tiết sẽ thấy khối Đánh giá món ăn.
+          </div>
+
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <h1 className="text-3xl font-black text-gray-900">
-              Thực đơn hôm nay
-            </h1>
             <div className="flex items-center gap-4 w-full md:w-auto">
               <div className="relative flex-1 md:w-80">
                 <Search
@@ -186,6 +187,9 @@ export default function UserMenu() {
                         <h3 className="font-bold text-gray-900 line-clamp-2 mb-4 flex-1">
                           {food.name}
                         </h3>
+                        <div className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg w-fit">
+                          <Star size={12} className="fill-blue-600" /> Mở chi tiết để đánh giá món
+                        </div>
                         <div className="flex items-center justify-between mt-auto">
                           <p className="text-lg font-black text-orange-500">
                             {(food.price || 0).toLocaleString('vi-VN')}đ

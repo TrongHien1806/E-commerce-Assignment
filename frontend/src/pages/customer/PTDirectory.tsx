@@ -3,6 +3,7 @@ import { Search, Loader2, Dumbbell } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import { Input } from '@/components/ui/Input';
 import api from '@/services/api';
+import { Link } from 'react-router-dom';
 
 type PTService = {
   _id: string;
@@ -100,6 +101,14 @@ export default function PTDirectory() {
                     <p>Thời hạn: {Number(service.durationDays || 0)} ngày</p>
                     <p>Giá: {Number(service.price || 0).toLocaleString('vi-VN')} đ</p>
                   </div>
+                  {service.ptId ? (
+                    <Link
+                      to={`/pt/${service.ptId}`}
+                      className="mt-4 inline-flex text-sm font-bold text-orange-600 hover:text-orange-700"
+                    >
+                      Xem hồ sơ PT & đánh giá
+                    </Link>
+                  ) : null}
                 </article>
               ))
             )}

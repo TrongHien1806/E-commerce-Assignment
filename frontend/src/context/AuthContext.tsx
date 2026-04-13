@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import api from '@/services/api';
 
 interface User {
@@ -19,9 +19,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getValidStoredToken = () => {
+  const rawToken = localStorage.getItem('access_token');
+  const token = rawToken?.replace(/^"|"$/g, '').trim();
+
+  if (!token || token.split('.').length !== 3) {
+    if (rawToken) localStorage.removeItem('access_token');
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload?.exp && payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      return null;
+    }
+  } catch {
+    localStorage.removeItem('access_token');
+    return null;
+  }
+
+  return token;
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
     const fetchProfile = async () => {
     try {
@@ -39,15 +64,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const rawToken = localStorage.getItem('access_token');
-    const token = rawToken?.replace(/^"|"$/g, '').trim();
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
-    if (rawToken && (!token || token.split('.').length !== 3)) {
-      localStorage.removeItem('access_token');
-      setLoading(false);
-      return;
-    }
-
+    const token = getValidStoredToken();
     if (token) {
       fetchProfile();
     } else {
@@ -57,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const syncProfile = () => {
-      if (localStorage.getItem('access_token')) {
+      if (getValidStoredToken()) {
         fetchProfile();
       }
     };

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import {
   Flame,
@@ -22,6 +23,9 @@ type UserOrder = {
   status: OrderStatus;
   grandTotal: number;
   packageType: 'ONE_DAY' | 'WEEKLY_7D';
+  items?: Array<{
+    itemId?: string;
+  }>;
   createdAt?: string;
   payment?: {
     method?: 'COD' | 'VNPay' | 'MoMo';
@@ -31,6 +35,7 @@ type UserOrder = {
 
 type RegisteredPTService = {
   _id: string;
+  ptId?: string;
   title?: string;
   sessions?: number;
   price?: number;
@@ -241,6 +246,16 @@ export default function UserDashboard() {
               <h2 className="text-xl font-black text-gray-900">Theo dõi trạng thái đơn hàng</h2>
             </div>
 
+            <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800">
+              Đánh giá món ăn: mở trang
+              {' '}
+              <Link to="/dashboard/menu" className="underline font-black hover:text-orange-900">
+                Thực đơn
+              </Link>
+              {' '}
+              rồi bấm vào món để vào phần đánh giá.
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <StatusCard title="Chờ xử lý" value={countOrderByStatus(orders, 'Pending')} icon={<Clock3 size={16} className="text-amber-500" />} />
               <StatusCard title="Đang nấu" value={countOrderByStatus(orders, 'Cooking')} icon={<Flame size={16} className="text-orange-500" />} />
@@ -258,13 +273,14 @@ export default function UserDashboard() {
                     <th className="pb-4">Gói</th>
                     <th className="pb-4">Thanh toán</th>
                     <th className="pb-4">Trạng thái</th>
+                    <th className="pb-4">Đánh giá</th>
                     <th className="pb-4 text-right">Tổng tiền</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {recentOrders(orders).length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-sm font-medium text-gray-500">Bạn chưa có đơn hàng nào.</td>
+                      <td colSpan={7} className="py-8 text-center text-sm font-medium text-gray-500">Bạn chưa có đơn hàng nào.</td>
                     </tr>
                   ) : (
                     recentOrders(orders).map((order) => (
@@ -274,6 +290,30 @@ export default function UserDashboard() {
                         <td className="py-4 text-sm font-semibold text-gray-700">{order.packageType === 'WEEKLY_7D' ? 'Combo 7 ngày' : 'Một ngày'}</td>
                         <td className="py-4 text-sm text-gray-500">{order.payment?.method || 'N/A'} ({order.payment?.status || 'N/A'})</td>
                         <td className="py-4">{renderStatusBadge(order.status)}</td>
+                        <td className="py-4 text-sm">
+                          {order.status === 'Completed' ? (
+                            (() => {
+                              const uniqueItemIds = Array.from(
+                                new Set((order.items || []).map((item) => String(item.itemId || '')).filter(Boolean))
+                              );
+
+                              if (uniqueItemIds.length === 0) {
+                                return <span className="text-gray-400">Không có món để đánh giá</span>;
+                              }
+
+                              return (
+                                <Link
+                                  to={`/food/${uniqueItemIds[0]}#review`}
+                                  className="font-bold text-orange-600 hover:text-orange-700 underline"
+                                >
+                                  Đánh giá ngay
+                                </Link>
+                              );
+                            })()
+                          ) : (
+                            <span className="text-gray-400">Chờ hoàn thành</span>
+                          )}
+                        </td>
                         <td className="py-4 text-sm font-black text-gray-900 text-right">{Number(order.grandTotal || 0).toLocaleString('vi-VN')} đ</td>
                       </tr>
                     ))
@@ -293,6 +333,11 @@ export default function UserDashboard() {
                   <p className="text-xs font-medium text-gray-400 uppercase tracking-wider truncate">Dịch vụ PT</p>
                   <p className="text-sm font-black text-gray-900 truncate mt-1">{service.title || 'Gói PT'}</p>
                   <p className="text-[11px] font-semibold text-gray-500 mt-1">{Number(service.sessions || 0)} buổi • {Number(service.price || 0).toLocaleString('vi-VN')} đ</p>
+                  {service.ptId ? (
+                    <Link to={`/pt/${service.ptId}`} className="mt-2 inline-flex text-[11px] font-bold text-orange-600 hover:text-orange-700">
+                      Đánh giá PT
+                    </Link>
+                  ) : null}
                 </div>
               </article>
             ))}
