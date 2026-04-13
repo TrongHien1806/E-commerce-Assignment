@@ -1,129 +1,237 @@
-import { useState, useMemo, FormEvent } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Clock, 
-  Flame, 
-  ChevronRight,
-  Utensils,
-  CheckCircle2,
-  Users,
-  X,
-  Image as ImageIcon
-} from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import api from '@/services/api';
 
-const initialMenus = [
-  { 
-    id: 1, 
-    name: 'Thực đơn Giảm mỡ Cấp tốc', 
-    calories: 1500, 
-    protein: '120g', 
-    carbs: '150g', 
-    fats: '45g', 
-    students: 12,
-    image: 'https://picsum.photos/seed/salad/400/300',
-    tags: ['Ít Carb', 'Giàu Protein'],
-    isAssigned: true
-  },
-  { 
-    id: 2, 
-    name: 'Thực đơn Tăng cơ Lean Bulk', 
-    calories: 2800, 
-    protein: '180g', 
-    carbs: '350g', 
-    fats: '70g', 
-    students: 8,
-    image: 'https://picsum.photos/seed/steak/400/300',
-    tags: ['Nhiều Calo', 'Tăng cơ'],
-    isAssigned: true
-  },
-  { 
-    id: 3, 
-    name: 'Chế độ Ăn chay Linh hoạt', 
-    calories: 1800, 
-    protein: '90g', 
-    carbs: '250g', 
-    fats: '50g', 
-    students: 5,
-    image: 'https://picsum.photos/seed/vegan/400/300',
-    tags: ['Ăn chay', 'Cân bằng'],
-    isAssigned: false
-  },
-  { 
-    id: 4, 
-    name: 'Keto Standard Plan', 
-    calories: 1600, 
-    protein: '100g', 
-    carbs: '30g', 
-    fats: '120g', 
-    students: 15,
-    image: 'https://picsum.photos/seed/keto/400/300',
-    tags: ['Keto', 'Giảm mỡ'],
-    isAssigned: false
-  },
-];
+type PTService = {
+  _id: string;
+  ptId?: string | { $oid?: string; toString?: () => string };
+  title: string;
+  description: string;
+  price: number;
+  sessions: number;
+  durationDays: number;
+  isActive: boolean;
+};
+
+type MeProfile = {
+  _id: string;
+  username?: string;
+};
+
+type ServiceForm = {
+  title: string;
+  description: string;
+  price: string;
+  sessions: string;
+  durationDays: string;
+  isActive: boolean;
+};
+
+const emptyForm: ServiceForm = {
+  title: '',
+  description: '',
+  price: '',
+  sessions: '',
+  durationDays: '',
+  isActive: true
+};
 
 export default function PTMenu() {
-  const [menus, setMenus] = useState(initialMenus);
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  
-  // New menu form state
-  const [newMenu, setNewMenu] = useState({
-    name: '',
-    calories: '',
-    protein: '',
-    carbs: '',
-    fats: '',
-    tags: ''
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [services, setServices] = useState<PTService[]>([]);
+  const [me, setMe] = useState<MeProfile | null>(null);
 
-  const filteredMenus = useMemo(() => {
-    return menus.filter(menu => {
-      const matchesSearch = menu.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTab = activeTab === 'all' || (activeTab === 'assigned' && menu.isAssigned);
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'inactive'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [form, setForm] = useState<ServiceForm>(emptyForm);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setWarning(null);
+
+      const meRes = await api.get('/users/me');
+      const profile = meRes.data?.result;
+      let servicesRes;
+      try {
+        servicesRes = await api.get('/pt/my-services?limit=100&page=1');
+      } catch (error: any) {
+        // Fallback de tranh vo trang neu backend route quan ly chua san sang.
+        if (error?.response?.status === 404) {
+          servicesRes = await api.get('/pt/services?limit=100&page=1');
+        } else {
+          throw error;
+        }
+      }
+
+      const allServices = servicesRes.data?.result?.services;
+
+      setMe(profile || null);
+
+      const normalizedServices = Array.isArray(allServices) ? allServices : [];
+      const normalizeId = (value: unknown): string => {
+        if (!value) return '';
+        if (typeof value === 'string') return value;
+        if (typeof value === 'object' && value !== null) {
+          const asRecord = value as Record<string, any>;
+          if (typeof asRecord.$oid === 'string') return asRecord.$oid;
+          if (typeof asRecord.toString === 'function') {
+            const id = asRecord.toString();
+            return typeof id === 'string' ? id : '';
+          }
+        }
+        return '';
+      };
+
+      const ownServices = normalizedServices.filter((service: any) => {
+        const ownerId = normalizeId(service?.ptId);
+        const currentUserId = normalizeId(profile?._id);
+        return ownerId && currentUserId ? ownerId === currentUserId : true;
+      });
+      setServices(ownServices);
+    } catch (error) {
+      console.error('Loi tai du lieu PT menu:', error);
+      setWarning('Khong the tai danh sach goi PT. Vui long thu lai.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const filteredServices = useMemo(() => {
+    return services.filter((service) => {
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        query.length === 0 ||
+        service.title.toLowerCase().includes(query) ||
+        service.description.toLowerCase().includes(query);
+      const matchesTab =
+        activeTab === 'all' ||
+        (activeTab === 'active' && service.isActive) ||
+        (activeTab === 'inactive' && !service.isActive);
       return matchesSearch && matchesTab;
     });
-  }, [menus, searchQuery, activeTab]);
+  }, [services, searchQuery, activeTab]);
 
-  const handleAddMenu = (e: FormEvent) => {
-    e.preventDefault();
-    if (!newMenu.name) return;
-
-    const menuToAdd = {
-      id: Date.now(),
-      name: newMenu.name,
-      calories: parseInt(newMenu.calories) || 0,
-      protein: newMenu.protein + 'g',
-      carbs: newMenu.carbs + 'g',
-      fats: newMenu.fats + 'g',
-      students: 0,
-      image: `https://picsum.photos/seed/${Date.now()}/400/300`,
-      tags: newMenu.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
-      isAssigned: false
-    };
-
-    setMenus([menuToAdd, ...menus]);
-    setShowAddModal(false);
-    setNewMenu({ name: '', calories: '', protein: '', carbs: '', fats: '', tags: '' });
+  const openCreateModal = () => {
+    setEditingServiceId(null);
+    setForm(emptyForm);
+    setWarning(null);
+    setShowFormModal(true);
   };
+
+  const openEditModal = (service: PTService) => {
+    setEditingServiceId(service._id);
+    setForm({
+      title: service.title,
+      description: service.description,
+      price: String(service.price || 0),
+      sessions: String(service.sessions || 0),
+      durationDays: String(service.durationDays || 0),
+      isActive: Boolean(service.isActive)
+    });
+    setWarning(null);
+    setShowFormModal(true);
+  };
+
+  const handleSubmitForm = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSaving(true);
+      setWarning(null);
+
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        price: Number(form.price || 0),
+        sessions: Number(form.sessions || 0),
+        durationDays: Number(form.durationDays || 0),
+        isActive: form.isActive
+      };
+
+      if (!payload.title || !payload.description || payload.price <= 0 || payload.sessions <= 0 || payload.durationDays <= 0) {
+        setWarning('Vui long nhap day du thong tin va cac gia tri lon hon 0.');
+        return;
+      }
+
+      if (editingServiceId) {
+        const res = await api.patch(`/pt/services/${editingServiceId}`, payload);
+        const updated = res.data?.result as PTService | undefined;
+        if (updated) {
+          setServices((prev) => prev.map((item) => (item._id === editingServiceId ? { ...item, ...updated } : item)));
+        }
+      } else {
+        const res = await api.post('/pt/services', payload);
+        const created = res.data?.result as PTService | undefined;
+        if (created) {
+          setServices((prev) => [created, ...prev]);
+        } else {
+          await fetchData();
+        }
+      }
+
+      setShowFormModal(false);
+      setForm(emptyForm);
+      setEditingServiceId(null);
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the luu goi PT.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (serviceId: string) => {
+    try {
+      const res = await api.delete(`/pt/services/${serviceId}`);
+      const updated = res.data?.result as PTService | undefined;
+      if (updated) {
+        setServices((prev) => prev.map((item) => (item._id === serviceId ? { ...item, ...updated } : item)));
+      } else {
+        setServices((prev) => prev.map((item) => (item._id === serviceId ? { ...item, isActive: false } : item)));
+      }
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Khong the an goi PT nay.');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-[#fafafa]">
+        <Sidebar role="pt" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="animate-spin text-orange-500" size={40} />
+        </div>
+      </div>
+    );
+  }
+
+  const modalTitle = editingServiceId ? 'Cap nhat goi PT' : 'Tao goi PT moi';
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="pt" />
       
       <div className="flex-1 flex flex-col">
-        <Header title="Quản lý thực đơn" userRole="Huấn luyện viên" avatar="https://i.pravatar.cc/150?u=pt" hideSearch={true} />
+        <Header title="Quan ly goi PT" userName={me?.username} userRole="Huấn luyện viên" hideSearch={true} />
         
         <main className="p-8 space-y-8 overflow-y-auto">
-          {/* Action Bar */}
+          {warning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {warning}
+            </div>
+          ) : null}
+
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-2 bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
               <button 
@@ -133,16 +241,25 @@ export default function PTMenu() {
                   activeTab === 'all' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-gray-400 hover:text-gray-600"
                 )}
               >
-                Tất cả thực đơn
+                Tat ca (gom da an)
               </button>
               <button 
-                onClick={() => setActiveTab('assigned')}
+                onClick={() => setActiveTab('active')}
                 className={cn(
                   "px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
-                  activeTab === 'assigned' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-gray-400 hover:text-gray-600"
+                  activeTab === 'active' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-gray-400 hover:text-gray-600"
                 )}
               >
-                Đang áp dụng
+                Dang hoat dong
+              </button>
+              <button
+                onClick={() => setActiveTab('inactive')}
+                className={cn(
+                  "px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+                  activeTab === 'inactive' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                Da an
               </button>
             </div>
 
@@ -158,177 +275,152 @@ export default function PTMenu() {
                 />
               </div>
               <button 
-                onClick={() => setShowAddModal(true)}
+                onClick={openCreateModal}
                 className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-200"
               >
                 <Plus size={20} />
-                Tạo thực đơn mới
+                Tao goi PT moi
               </button>
             </div>
           </div>
 
-          {/* Menu Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
-            {filteredMenus.map((menu) => (
-              <div key={menu.id} className="bg-white rounded-[40px] overflow-hidden shadow-sm border border-gray-50 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={menu.image} 
-                    alt={menu.name} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-                    {menu.tags.map(tag => (
-                      <span key={tag} className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-[9px] font-black text-indigo-600 uppercase tracking-wider shadow-sm">
-                        {tag}
-                      </span>
-                    ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredServices.map((service) => (
+              <article key={service._id} className="bg-white rounded-[28px] p-6 border border-gray-100 shadow-sm space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-base font-black text-gray-900 leading-snug">{service.title}</h3>
+                  <span className={cn(
+                    'px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-wider',
+                    service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  )}>
+                    {service.isActive ? 'Active' : 'Hidden'}
+                  </span>
+                </div>
+
+                <p className="text-sm text-gray-600 line-clamp-3">{service.description}</p>
+
+                <div className="grid grid-cols-3 gap-2 text-center py-3 border-y border-gray-100">
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Buoi</p>
+                    <p className="text-sm font-black text-gray-900">{service.sessions}</p>
                   </div>
-                  <button className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-colors shadow-sm">
-                    <MoreVertical size={20} />
+                  <div className="border-x border-gray-100">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Ngay</p>
+                    <p className="text-sm font-black text-gray-900">{service.durationDays}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Gia</p>
+                    <p className="text-sm font-black text-gray-900">{Math.round(service.price || 0).toLocaleString('vi-VN')} đ</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(service)}
+                    className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <Pencil size={14} /> Sua
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(service._id)}
+                    className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={14} /> An
                   </button>
                 </div>
-
-                <div className="p-6 space-y-6">
-                  <div>
-                    <h3 className="text-lg font-black text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors">{menu.name}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="flex items-center gap-1 text-orange-500">
-                        <Flame size={14} />
-                        <span className="text-sm font-black">{menu.calories}</span>
-                      </div>
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-tighter">kcal / ngày</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 py-4 border-y border-gray-50">
-                    <div className="text-center">
-                      <p className="text-[9px] font-bold text-gray-400 uppercase">Protein</p>
-                      <p className="text-xs font-black text-gray-900">{menu.protein}</p>
-                    </div>
-                    <div className="text-center border-x border-gray-50">
-                      <p className="text-[9px] font-bold text-gray-400 uppercase">Carbs</p>
-                      <p className="text-xs font-black text-gray-900">{menu.carbs}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[9px] font-bold text-gray-400 uppercase">Fats</p>
-                      <p className="text-xs font-black text-gray-900">{menu.fats}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {[1, 2, 3].map(i => (
-                          <img key={i} src={`https://i.pravatar.cc/100?u=${menu.id + i}`} className="w-6 h-6 rounded-full border-2 border-white object-cover" alt="Student" />
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-bold text-gray-400">+{menu.students} học viên</span>
-                    </div>
-                    <button className="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
-                      <ChevronRight size={20} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              </article>
             ))}
           </div>
           
-          {filteredMenus.length === 0 && (
+          {filteredServices.length === 0 && (
             <div className="text-center py-20">
-              <p className="text-gray-400 font-bold">Không tìm thấy thực đơn phù hợp...</p>
+              <p className="text-gray-400 font-bold">Khong tim thay goi PT phu hop...</p>
             </div>
           )}
         </main>
       </div>
 
-      {/* Add Menu Modal */}
-      {showAddModal && (
+      {showFormModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFormModal(false)} />
           <div className="relative bg-white rounded-[40px] shadow-2xl max-w-lg w-full p-8 space-y-8 animate-in fade-in zoom-in duration-300">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-black text-gray-900">Tạo thực đơn mới</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 text-gray-400 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition-all">
+              <h3 className="text-2xl font-black text-gray-900">{modalTitle}</h3>
+              <button onClick={() => setShowFormModal(false)} className="p-2 text-gray-400 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition-all">
                 <X size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleAddMenu} className="space-y-6">
+            <form onSubmit={handleSubmitForm} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tên thực đơn</label>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ten goi PT</label>
                 <input 
                   type="text" 
                   required
-                  value={newMenu.name}
-                  onChange={(e) => setNewMenu({...newMenu, name: e.target.value})}
-                  placeholder="VD: Thực đơn tăng cơ 30 ngày..." 
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="VD: PT Tang Co 12 Buoi" 
                   className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Calories (kcal)</label>
-                  <div className="relative">
-                    <Flame className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input 
-                      type="number" 
-                      value={newMenu.calories}
-                      onChange={(e) => setNewMenu({...newMenu, calories: e.target.value})}
-                      placeholder="2000" 
-                      className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" 
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tags (cách nhau bằng dấu phẩy)</label>
-                  <input 
-                    type="text" 
-                    value={newMenu.tags}
-                    onChange={(e) => setNewMenu({...newMenu, tags: e.target.value})}
-                    placeholder="Low Carb, Keto..." 
-                    className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" 
-                  />
-                </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mo ta</label>
+                <textarea
+                  required
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold"
+                />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Protein (g)</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gia (VND)</label>
                   <input 
                     type="number" 
-                    value={newMenu.protein}
-                    onChange={(e) => setNewMenu({...newMenu, protein: e.target.value})}
-                    placeholder="150" 
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    placeholder="500000" 
                     className="w-full px-4 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Carbs (g)</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">So buoi</label>
                   <input 
                     type="number" 
-                    value={newMenu.carbs}
-                    onChange={(e) => setNewMenu({...newMenu, carbs: e.target.value})}
-                    placeholder="200" 
+                    value={form.sessions}
+                    onChange={(e) => setForm({ ...form, sessions: e.target.value })}
+                    placeholder="12" 
                     className="w-full px-4 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Fats (g)</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">So ngay</label>
                   <input 
                     type="number" 
-                    value={newMenu.fats}
-                    onChange={(e) => setNewMenu({...newMenu, fats: e.target.value})}
-                    placeholder="60" 
+                    value={form.durationDays}
+                    onChange={(e) => setForm({ ...form, durationDays: e.target.value })}
+                    placeholder="30" 
                     className="w-full px-4 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" 
                   />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full py-8 bg-indigo-600 text-white rounded-3xl font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all">
-                Tạo thực đơn
+              <label className="inline-flex items-center gap-2 text-sm font-bold text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                />
+                Dang mo ban
+              </label>
+
+              <Button type="submit" disabled={isSaving} className="w-full py-8 bg-indigo-600 text-white rounded-3xl font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all">
+                {isSaving ? 'Dang luu...' : editingServiceId ? 'Luu thay doi' : 'Tao goi PT'}
               </Button>
             </form>
           </div>

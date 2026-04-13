@@ -1,232 +1,288 @@
-import { useMemo } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  Area,
-  AreaChart
-} from 'recharts';
-import { 
-  Flame, 
-  Utensils, 
-  Zap, 
-  Droplets,
-  TrendingUp,
-  TrendingDown,
-  Search,
-  Bell
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2, UserCircle, ClipboardList, Clock3 } from 'lucide-react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import { cn } from '@/lib/utils';
+import api from '@/services/api';
 
-const calorieData = [
-  { day: 'CN', consumed: 1400, burned: 1000 },
-  { day: 'T2', consumed: 1600, burned: 1200 },
-  { day: 'T3', consumed: 1800, burned: 1700 },
-  { day: 'T4', consumed: 1750, burned: 1650 },
-  { day: 'T5', consumed: 1650, burned: 1100 },
-  { day: 'T6', consumed: 1300, burned: 900 },
-  { day: 'T7', consumed: 1550, burned: 1150 },
-];
+type PTService = {
+  _id: string;
+  ptId?: string;
+  title?: string;
+};
 
-const weightData = [
-  { month: 'Th4', weight: 85 },
-  { month: 'Th5', weight: 83 },
-  { month: 'Th6', weight: 80 },
-  { month: 'Th7', weight: 73 },
-  { month: 'Th8', weight: 80 },
-  { month: 'Th9', weight: 78 },
-];
+type ClientRegistration = {
+  serviceId?: string;
+  remainingSessions?: number;
+  totalSessions?: number;
+  registeredAt?: string;
+};
+
+type PTClient = {
+  _id: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  registeredPTServices?: Array<ClientRegistration | string>;
+};
+
+type PTMe = {
+  _id: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  ptProfile?: {
+    experienceYears?: number;
+    specialties?: string[];
+    rating?: number;
+    approvedByAdmin?: boolean;
+  };
+};
+
+type ClientRow = {
+  key: string;
+  clientId: string;
+  clientName: string;
+  contact: string;
+  serviceId: string;
+  serviceTitle: string;
+  remaining: number;
+  total: number;
+  registeredAt: string;
+};
+
+function parseRegistration(reg: ClientRegistration | string) {
+  if (typeof reg === 'string') {
+    return {
+      serviceId: reg,
+      remainingSessions: 0,
+      totalSessions: 0,
+      registeredAt: undefined
+    };
+  }
+
+  return {
+    serviceId: reg?.serviceId,
+    remainingSessions: Number(reg?.remainingSessions || 0),
+    totalSessions: Number(reg?.totalSessions || 0),
+    registeredAt: reg?.registeredAt
+  };
+}
 
 export default function PTProfile() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingIn, setIsCheckingIn] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+
+  const [me, setMe] = useState<PTMe | null>(null);
+  const [services, setServices] = useState<PTService[]>([]);
+  const [clients, setClients] = useState<PTClient[]>([]);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setWarning(null);
+
+      const [meRes, servicesRes, clientsRes] = await Promise.all([
+        api.get('/users/me'),
+        api.get('/pt/services?limit=100&page=1'),
+        api.get('/pt/clients')
+      ]);
+
+      const meResult = meRes.data?.result;
+      const allServices = Array.isArray(servicesRes.data?.result?.services) ? servicesRes.data.result.services : [];
+      const ownServices = allServices.filter((service: any) => {
+        const ownerId = typeof service?.ptId === 'string' ? service.ptId : service?.ptId?.toString?.();
+        return ownerId && meResult?._id ? ownerId === meResult._id : false;
+      });
+
+      setMe(meResult || null);
+      setServices(ownServices);
+      setClients(Array.isArray(clientsRes.data?.result) ? clientsRes.data.result : []);
+    } catch (error) {
+      console.error('Loi tai PT profile:', error);
+      setWarning('Khong the tai du lieu hoc vien/goi PT. Vui long thu lai.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const serviceMap = useMemo(() => {
+    const map = new Map<string, PTService>();
+    for (const service of services) {
+      map.set(service._id, service);
+    }
+    return map;
+  }, [services]);
+
+  const rows = useMemo(() => {
+    const list: ClientRow[] = [];
+
+    for (const client of clients) {
+      const registrations = Array.isArray(client.registeredPTServices) ? client.registeredPTServices : [];
+
+      for (const reg of registrations) {
+        const parsed = parseRegistration(reg);
+        if (!parsed.serviceId || !serviceMap.has(parsed.serviceId)) continue;
+
+        const serviceTitle = serviceMap.get(parsed.serviceId)?.title || 'Goi PT';
+
+        list.push({
+          key: `${client._id}-${parsed.serviceId}`,
+          clientId: client._id,
+          clientName: client.username || 'Khach hang',
+          contact: client.email || client.phone || 'N/A',
+          serviceId: parsed.serviceId,
+          serviceTitle,
+          remaining: parsed.remainingSessions,
+          total: parsed.totalSessions,
+          registeredAt: parsed.registeredAt ? new Date(parsed.registeredAt).toLocaleDateString('vi-VN') : 'N/A'
+        });
+      }
+    }
+
+    return list;
+  }, [clients, serviceMap]);
+
+  const handleCheckIn = async (row: ClientRow) => {
+    try {
+      setIsCheckingIn(row.key);
+      setWarning(null);
+      await api.patch(`/pt/clients/${row.clientId}/services/${row.serviceId}/check-in`);
+      await fetchData();
+    } catch (error: any) {
+      setWarning(error?.response?.data?.message || 'Check-in that bai.');
+    } finally {
+      setIsCheckingIn(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-[#fafafa]">
+        <Sidebar role="pt" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="animate-spin text-orange-500" size={40} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="pt" />
-      
-      <div className="flex-1 flex flex-col">
-        <Header title="Hồ sơ học viên: Nguyễn Văn A" userRole="Huấn luyện viên" avatar="https://i.pravatar.cc/150?u=pt" />
 
-        <main className="p-8 space-y-10 overflow-y-auto">
-          {/* Top Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <MetricCard 
-              title="Tổng Calories"
-              value="12,615"
-              unit="kcal"
-              change="+1.45%"
-              icon={<Flame size={24} />}
-              color="bg-[#d4e157]"
-            />
-            <MetricCard 
-              title="Tổng Carb"
-              value="2,100"
-              unit="gr"
-              change="+0.78%"
-              icon={<Utensils size={24} />}
-              color="bg-[#ffd54f]"
-            />
-            <MetricCard 
-              title="Tổng Protein"
-              value="498"
-              unit="gr"
-              change="-2.84%"
-              icon={<Zap size={24} />}
-              color="bg-[#ffab91]"
-            />
-            <MetricCard 
-              title="Tổng Chất béo"
-              value="285"
-              unit="gr"
-              change="+4.16%"
-              icon={<Droplets size={24} />}
-              color="bg-[#e0e0e0]"
-            />
-          </div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header title="Hoc vien & PT profile" userName={me?.username} userRole="Huấn luyện viên" hideSearch={true} />
 
-          {/* Calories Activities Chart */}
-          <section className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-50 space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900">Hoạt động Calories</h2>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#ffd54f]" />
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Hấp thụ</span>
+        <main className="p-8 space-y-8 overflow-y-auto min-w-0">
+          {warning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {warning}
+            </div>
+          ) : null}
+
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <article className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <UserCircle size={20} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#ffab91]" />
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Đốt cháy</span>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tai khoan PT</p>
+                  <p className="text-sm font-black text-gray-900">{me?.email || 'N/A'}</p>
                 </div>
-                <select className="bg-gray-50 border-none text-[10px] font-bold uppercase tracking-wider rounded-xl px-3 py-1.5 outline-none">
-                  <option>7 ngày qua</option>
-                </select>
               </div>
-            </div>
+            </article>
 
-            <div className="space-y-2">
-              <p className="text-2xl font-black text-gray-900">450 <span className="text-sm text-gray-400 font-bold uppercase">kcal còn lại</span></p>
-              <p className="text-[10px] text-gray-400 font-bold uppercase">Mục tiêu: 2,000 kcal</p>
-            </div>
+            <article className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                  <ClipboardList size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Goi PT cua ban</p>
+                  <p className="text-2xl font-black text-gray-900">{services.length}</p>
+                </div>
+              </div>
+            </article>
 
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={calorieData} barGap={8}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="day" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 600 }}
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 600 }}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: '#f9fafb' }}
-                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Bar dataKey="consumed" fill="#ffd54f" radius={[6, 6, 0, 0]} barSize={32} />
-                  <Bar dataKey="burned" fill="#ffab91" radius={[6, 6, 0, 0]} barSize={32} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <article className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                  <Clock3 size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Luot dang ky</p>
+                  <p className="text-2xl font-black text-gray-900">{rows.length}</p>
+                </div>
+              </div>
+            </article>
           </section>
 
-          {/* Weight Tracking Chart */}
-          <section className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-50 space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900">Theo dõi cân nặng</h2>
-              <button className="text-gray-400 hover:text-gray-900">
-                <TrendingUp size={20} />
-              </button>
+          <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+            <h2 className="text-xl font-black text-gray-900">Thong tin PT</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <p><span className="font-black">Ho ten:</span> {me?.username || 'N/A'}</p>
+              <p><span className="font-black">Email:</span> {me?.email || 'N/A'}</p>
+              <p><span className="font-black">So dien thoai:</span> {me?.phone || 'N/A'}</p>
+              <p><span className="font-black">Kinh nghiem:</span> {Number(me?.ptProfile?.experienceYears || 0)} nam</p>
+              <p><span className="font-black">Danh gia:</span> {Number(me?.ptProfile?.rating || 0).toFixed(1)}</p>
+              <p><span className="font-black">Trang thai duyet:</span> {me?.ptProfile?.approvedByAdmin ? 'Da duyet' : 'Chua duyet'}</p>
             </div>
+            <p className="text-sm"><span className="font-black">Chuyen mon:</span> {(me?.ptProfile?.specialties || []).join(', ') || 'Chua cap nhat'}</p>
+          </section>
 
-            <div className="grid grid-cols-3 gap-8">
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cân nặng bắt đầu</p>
-                <p className="text-2xl font-black text-gray-900">85 <span className="text-xs text-gray-400">Kg</span></p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cân nặng hiện tại</p>
-                <p className="text-2xl font-black text-gray-900">78 <span className="text-xs text-gray-400">Kg</span></p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Mục tiêu</p>
-                <p className="text-2xl font-black text-gray-900">65 <span className="text-xs text-gray-400">Kg</span></p>
-              </div>
-            </div>
-
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={weightData}>
-                  <defs>
-                    <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ffd54f" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#ffd54f" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="month" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 600 }}
-                    dy={10}
-                  />
-                  <YAxis 
-                    hide
-                    domain={['dataMin - 5', 'dataMax + 5']}
-                  />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="weight" 
-                    stroke="#ffd54f" 
-                    strokeWidth={4}
-                    fillOpacity={1} 
-                    fill="url(#colorWeight)" 
-                    dot={{ r: 6, fill: '#ffd54f', strokeWidth: 3, stroke: '#fff' }}
-                    activeDot={{ r: 8, strokeWidth: 0 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+          <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
+            <h2 className="text-xl font-black text-gray-900">Danh sach hoc vien va check-in</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left">
+                <thead>
+                  <tr className="border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <th className="pb-4">Hoc vien</th>
+                    <th className="pb-4">Lien he</th>
+                    <th className="pb-4">Goi PT</th>
+                    <th className="pb-4">Con lai</th>
+                    <th className="pb-4">Dang ky</th>
+                    <th className="pb-4">Hanh dong</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-sm font-medium text-gray-500">
+                        Chua co hoc vien dang ky goi cua ban.
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((row) => (
+                      <tr key={row.key} className="hover:bg-gray-50/60 transition-colors">
+                        <td className="py-4 text-sm font-bold text-gray-900">{row.clientName}</td>
+                        <td className="py-4 text-sm text-gray-500">{row.contact}</td>
+                        <td className="py-4 text-sm font-semibold text-gray-700">{row.serviceTitle}</td>
+                        <td className="py-4 text-sm font-black text-gray-900">{row.remaining}/{row.total}</td>
+                        <td className="py-4 text-sm text-gray-500">{row.registeredAt}</td>
+                        <td className="py-4 text-sm">
+                          <button
+                            type="button"
+                            disabled={row.remaining <= 0 || isCheckingIn === row.key}
+                            onClick={() => handleCheckIn(row)}
+                            className="px-3 h-9 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isCheckingIn === row.key ? 'Dang tru buoi...' : 'Check-in'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </section>
         </main>
-      </div>
-    </div>
-  );
-}
-
-function MetricCard({ title, value, unit, change, icon, color }: any) {
-  const isPositive = change.startsWith('+');
-  return (
-    <div className={cn("p-6 rounded-[32px] flex items-center gap-6 shadow-sm border border-gray-50", color)}>
-      <div className="w-14 h-14 bg-white/30 backdrop-blur-md rounded-2xl flex items-center justify-center text-gray-900">
-        {icon}
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">{title}</p>
-        <div className="flex items-baseline gap-1">
-          <h3 className="text-2xl font-black text-gray-900">{value}</h3>
-          <span className="text-xs font-bold text-gray-600">{unit}</span>
-        </div>
-        <div className="flex items-center gap-1 mt-1">
-          {isPositive ? <TrendingUp size={12} className="text-gray-900" /> : <TrendingDown size={12} className="text-gray-900" />}
-          <span className="text-[10px] font-black text-gray-900">{change}</span>
-          <span className="text-[10px] text-gray-600 font-medium">so với tuần trước</span>
-        </div>
       </div>
     </div>
   );

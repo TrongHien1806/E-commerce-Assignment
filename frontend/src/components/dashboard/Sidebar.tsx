@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Utensils, Users, ClipboardList, 
-  Settings, LogOut, ShoppingBag, BarChart3, MessageSquare 
+  LogOut, ShoppingBag, BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -25,16 +25,17 @@ export default function Sidebar({ role }: SidebarProps) {
   // 2. Định nghĩa menu cho PT
   const ptLinks = [
     { icon: LayoutDashboard, label: 'Dashboard PT', path: '/dashboard/pt-view' },
-    { icon: Utensils, label: 'Quản lý thực đơn', path: '/dashboard/pt/menu' },
-    { icon: MessageSquare, label: 'Học viên & Chat', path: '/dashboard/pt/chat' },
+    { icon: Utensils, label: 'Gói PT của tôi', path: '/dashboard/pt/menu' },
+    { icon: Users, label: 'Học viên & Check-in', path: '/dashboard/pt/profile' },
   ];
 
   // 3. Định nghĩa menu cho Admin
   const adminLinks = [
     { icon: LayoutDashboard, label: 'Quản trị hệ thống', path: '/dashboard/admin' },
-    { icon: Users, label: 'Quản lý người dùng', path: '/dashboard/admin/users' },
+    { icon: Utensils, label: 'Quản lý thực đơn', path: '/dashboard/admin/menu' },
+    { icon: Users, label: 'Quản lý PT', path: '/dashboard/admin/pt' },
     { icon: ShoppingBag, label: 'Quản lý đơn hàng', path: '/dashboard/admin/orders' },
-    { icon: BarChart3, label: 'Thống kê tài chính', path: '/dashboard/admin/analytics' },
+    { icon: BarChart3, label: 'Dashboard thống kê', path: '/dashboard/admin/analytics' },
   ];
 
   const normalizedRole = role?.toLowerCase() === 'admin'

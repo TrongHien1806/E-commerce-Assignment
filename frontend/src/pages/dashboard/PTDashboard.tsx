@@ -6,6 +6,7 @@ import api from '@/services/api';
 
 type PTService = {
   _id: string;
+  ptId?: string | { toString: () => string };
   title: string;
   sessions: number;
   durationDays: number;
@@ -29,6 +30,7 @@ type PTClient = {
 };
 
 type PTUserProfile = {
+  _id?: string;
   username?: string;
   email?: string;
 };
@@ -39,6 +41,7 @@ export default function PTDashboard() {
   const [services, setServices] = useState<PTService[]>([]);
   const [clients, setClients] = useState<PTClient[]>([]);
   const [profile, setProfile] = useState<PTUserProfile | null>(null);
+  const [serviceTitleFilter, setServiceTitleFilter] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,9 +55,21 @@ export default function PTDashboard() {
           api.get('/users/me')
         ]);
 
+        const me = meRes.status === 'fulfilled' ? meRes.value.data?.result : null;
+        const myId = me?._id ? String(me._id) : '';
+
+        if (meRes.status === 'fulfilled') {
+          setProfile(me || null);
+        }
+
         if (servicesRes.status === 'fulfilled') {
           const items = servicesRes.value.data?.result?.services;
-          setServices(Array.isArray(items) ? items : []);
+          const allServices = Array.isArray(items) ? items : [];
+          const ownServices = allServices.filter((service: PTService) => {
+            const ownerId = typeof service.ptId === 'string' ? service.ptId : service.ptId?.toString?.();
+            return ownerId && myId ? ownerId === myId : false;
+          });
+          setServices(ownServices);
         }
 
         if (clientsRes.status === 'fulfilled') {
@@ -64,9 +79,6 @@ export default function PTDashboard() {
           setWarning('Không tải được danh sách học viên từ hệ thống.');
         }
 
-        if (meRes.status === 'fulfilled') {
-          setProfile(meRes.value.data?.result || null);
-        }
       } catch (error) {
         console.error('Lỗi khi tải PT dashboard:', error);
         setWarning('Có lỗi xảy ra khi tải dữ liệu dashboard PT.');
@@ -127,6 +139,12 @@ export default function PTDashboard() {
       activeEnrollments: activeRows
     };
   }, [clientRows, clients.length, services.length]);
+
+  const filteredServices = useMemo(() => {
+    const query = serviceTitleFilter.trim().toLowerCase();
+    if (!query) return services;
+    return services.filter((service) => (service.title || '').toLowerCase().includes(query));
+  }, [serviceTitleFilter, services]);
 
   if (isLoading) {
     return (
@@ -197,14 +215,22 @@ export default function PTDashboard() {
           </section>
 
           <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
-            <h2 className="text-xl font-black text-gray-900">Danh sách gói PT của hệ thống</h2>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <h2 className="text-xl font-black text-gray-900">Danh sách gói PT của bạn</h2>
+              <input
+                value={serviceTitleFilter}
+                onChange={(e) => setServiceTitleFilter(e.target.value)}
+                placeholder="Lọc theo title gói PT..."
+                className="w-full md:w-72 h-11 rounded-xl border border-gray-200 px-3 text-sm outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-300"
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {services.length === 0 ? (
+              {filteredServices.length === 0 ? (
                 <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm font-medium text-gray-500">
-                  Chưa có gói dịch vụ PT nào.
+                  Chưa có gói PT nào khớp điều kiện lọc.
                 </div>
               ) : (
-                services.map((service) => (
+                filteredServices.map((service) => (
                   <article key={service._id} className="rounded-2xl border border-gray-100 p-5 bg-gray-50/70">
                     <p className="text-sm font-black text-gray-900">{service.title}</p>
                     <div className="mt-3 space-y-1 text-xs font-semibold text-gray-500">
