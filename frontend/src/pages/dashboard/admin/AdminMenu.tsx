@@ -378,7 +378,7 @@ export default function AdminMenu() {
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="admin" />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header title="Quan ly Bep va Mon an" userRole="Quan tri vien" hideSearch={true} />
+        <Header title="Quản lý bếp và tình trạng đơn" userRole="Quản trị viên" hideSearch={true} />
 
         <main className="p-8 space-y-8 overflow-y-auto min-w-0">
           {warning ? (
@@ -389,14 +389,14 @@ export default function AdminMenu() {
 
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900">Man hinh bep va giao hang</h2>
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Don dang xu ly: {kitchenOrders.length}</span>
+              <h2 className="text-xl font-black text-gray-900">Bếp và giao hàng</h2>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Đơn đang xử lý: {kitchenOrders.length}</span>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {kitchenOrders.length === 0 ? (
                 <div className="col-span-full rounded-3xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-                  Chua co don nao trong hang doi bep/giao.
+                  Chưa có đơn hàng nào đang được xử lý bởi bếp hoặc giao hàng.
                 </div>
               ) : (
                 kitchenOrders.map((order) => {
@@ -436,13 +436,13 @@ export default function AdminMenu() {
 
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <h2 className="text-xl font-black text-gray-900 uppercase">Quan ly mon an</h2>
+              <h2 className="text-xl font-black text-gray-900 uppercase">Quản lý món ăn</h2>
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                   <input
                     type="text"
-                    placeholder="Tim ten mon, ID, tag..."
+                    placeholder="Tìm tên món, ID, tag..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-11 w-72 pl-10 pr-4 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500/10"
@@ -454,13 +454,13 @@ export default function AdminMenu() {
                   onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
                   className="h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 outline-none focus:ring-2 focus:ring-orange-500/10"
                 >
-                  <option value="all">Tat ca trang thai</option>
-                  <option value="active">Dang ban</option>
-                  <option value="inactive">Da an</option>
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="active">Đang bán</option>
+                  <option value="inactive">Đã ẩn</option>
                 </select>
 
                 <Button type="button" onClick={openCreateModal} className="h-11 rounded-xl bg-[#c1e06d] text-gray-900 font-black hover:bg-[#b1d05d]">
-                  <Plus size={16} className="mr-2" /> Them mon
+                  <Plus size={16} className="mr-2" /> Thêm món ăn
                 </Button>
               </div>
             </div>
@@ -469,19 +469,19 @@ export default function AdminMenu() {
               <table className="w-full min-w-[1100px] text-left border-collapse">
                 <thead>
                   <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-gray-50/40">
-                    <th className="px-6 py-4">Mon an</th>
-                    <th className="px-6 py-4">Gia</th>
-                    <th className="px-6 py-4">Dinh duong</th>
-                    <th className="px-6 py-4">Ton kho</th>
-                    <th className="px-6 py-4">Trang thai</th>
-                    <th className="px-6 py-4">Thao tac</th>
+                    <th className="px-6 py-4">Tên món ăn</th>
+                    <th className="px-6 py-4">Giá</th>
+                    <th className="px-6 py-4">Dinh dưỡng</th>
+                    <th className="px-6 py-4">Còn hàng</th>
+                    <th className="px-6 py-4">Trang thái</th>
+                    <th className="px-6 py-4">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredFoods.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500 font-medium">
-                        Khong tim thay mon an phu hop.
+                        Không tìm thấy món ăn nào phù hợp với tiêu chí của bạn.
                       </td>
                     </tr>
                   ) : (
@@ -573,7 +573,7 @@ export default function AdminMenu() {
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <h2 className="text-xl font-black text-gray-900 uppercase inline-flex items-center gap-2">
-                <MessageCircle size={20} className="text-orange-500" /> Quan ly review do an/combo
+                <MessageCircle size={20} className="text-orange-500" /> Review món ăn
               </h2>
               <select
                 value={selectedFoodReviewId}
@@ -590,9 +590,9 @@ export default function AdminMenu() {
 
             <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-5 space-y-3">
               {isLoadingReviews ? (
-                <div className="py-8 text-center text-sm text-gray-500">Dang tai review...</div>
+                <div className="py-8 text-center text-sm text-gray-500">Đang tải review...</div>
               ) : foodReviews.length === 0 ? (
-                <div className="py-8 text-center text-sm text-gray-500">Mon nay chua co review nao.</div>
+                <div className="py-8 text-center text-sm text-gray-500">Món ăn này chưa có review nào.</div>
               ) : (
                 foodReviews.map((review) => (
                   <article key={review._id} className="rounded-2xl border border-gray-100 p-4">
@@ -605,10 +605,10 @@ export default function AdminMenu() {
                         className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 text-xs font-black disabled:opacity-50"
                       >
                         <Trash2 size={14} />
-                        {isDeletingReviewId === review._id ? 'Dang xoa...' : 'Xoa review'}
+                        {isDeletingReviewId === review._id ? 'Đang xóa...' : 'Xóa review'}
                       </button>
                     </div>
-                    <p className="mt-2 text-sm text-gray-600">{review.comment || 'Khong co noi dung'}</p>
+                    <p className="mt-2 text-sm text-gray-600">{review.comment || 'Không có nội dung'}</p>
                     <p className="mt-2 text-xs text-gray-400">
                       User: {String(review.reviewerId || '').slice(-6)} • {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
                     </p>
@@ -625,7 +625,7 @@ export default function AdminMenu() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
           <div className="relative bg-white rounded-[32px] shadow-2xl max-w-3xl w-full p-7 space-y-6 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-black text-gray-900">{editFood ? 'Chinh sua mon an' : 'Them mon an moi'}</h3>
+              <h3 className="text-2xl font-black text-gray-900">{editFood ? 'Chỉnh sửa món ăn' : 'Thêm món ăn mới'}</h3>
               <button type="button" onClick={closeModal} className="p-2 text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100">
                 <X size={22} />
               </button>
@@ -636,7 +636,7 @@ export default function AdminMenu() {
                 <input
                   type="text"
                   required
-                  placeholder="Ten mon an"
+                  placeholder="Tên món ăn"
                   value={formData.name}
                   onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
@@ -644,7 +644,7 @@ export default function AdminMenu() {
                 <input
                   type="text"
                   required
-                  placeholder="Gia (VND)"
+                  placeholder="Giá (VND)"
                   value={formData.price}
                   onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
                   className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
@@ -654,7 +654,7 @@ export default function AdminMenu() {
               <textarea
                 required
                 rows={3}
-                placeholder="Mo ta ngan"
+                placeholder="Mô tả ngắn gọn về món ăn"
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
@@ -662,7 +662,7 @@ export default function AdminMenu() {
 
               <textarea
                 rows={2}
-                placeholder="Thong tin chi tiet (optional)"
+                placeholder="Thông tin chi tiết (tùy chọn, có thể là nguyên liệu, cách chế biến,...)"
                 value={formData.details}
                 onChange={(e) => setFormData((prev) => ({ ...prev, details: e.target.value }))}
                 className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
@@ -680,7 +680,7 @@ export default function AdminMenu() {
                 <input
                   type="text"
                   required
-                  placeholder="Ton kho"
+                  placeholder="Còn hàng (số lượng)"
                   value={formData.stock}
                   onChange={(e) => setFormData((prev) => ({ ...prev, stock: e.target.value }))}
                   className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
@@ -695,7 +695,7 @@ export default function AdminMenu() {
                   />
                   <label className="inline-flex items-center gap-2 text-xs font-bold text-blue-700 cursor-pointer">
                     <Upload size={14} />
-                    {isImageUploading ? 'Dang upload...' : 'Upload anh tu may'}
+                    {isImageUploading ? 'Đang upload...' : 'Upload ảnh từ máy tính'}
                     <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" disabled={isImageUploading} />
                   </label>
                 </div>
@@ -703,7 +703,7 @@ export default function AdminMenu() {
 
               {formData.image ? (
                 <div className="rounded-xl border border-gray-200 p-3 bg-gray-50">
-                  <p className="text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Xem truoc anh</p>
+                  <p className="text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Xem trước ảnh</p>
                   <img
                     src={formData.image}
                     alt="Food preview"
@@ -743,7 +743,7 @@ export default function AdminMenu() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="Tags (phay ngan cach)"
+                  placeholder="Tags (sử dụng dấu phẩy để ngăn cách)"
                   value={formData.tags}
                   onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
                   className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
@@ -754,21 +754,21 @@ export default function AdminMenu() {
                     checked={formData.isCombo}
                     onChange={(e) => setFormData((prev) => ({ ...prev, isCombo: e.target.checked }))}
                   />
-                  Mon combo
+                  là combo
                 </label>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
-                  placeholder="Nguyen lieu chinh"
+                  placeholder="Nguyên liệu chính (ví dụ: 'Thịt bò, rau củ,...')"
                   value={formData.ingredientName}
                   onChange={(e) => setFormData((prev) => ({ ...prev, ingredientName: e.target.value }))}
                   className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
                 />
                 <input
                   type="text"
-                  placeholder="Allergy tags (phay ngan cach)"
+                  placeholder="Allergy tags (sử dụng dấu phẩy để ngăn cách)"
                   value={formData.allergyTags}
                   onChange={(e) => setFormData((prev) => ({ ...prev, allergyTags: e.target.value }))}
                   className="h-12 px-4 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#c1e06d]/40"
@@ -780,7 +780,7 @@ export default function AdminMenu() {
                 disabled={isSubmitting || isImageUploading}
                 className="w-full h-12 bg-[#c1e06d] text-gray-900 rounded-2xl font-black hover:bg-[#b1d05d] disabled:opacity-60"
               >
-                {isImageUploading ? 'Dang upload anh...' : isSubmitting ? 'Dang luu...' : editFood ? 'Luu chinh sua' : 'Tao mon an'}
+                {isImageUploading ? 'Đang upload ảnh...' : isSubmitting ? 'Đang lưu...' : editFood ? 'Lưu chỉnh sửa' : 'Tạo món ăn'}
               </Button>
             </form>
           </div>

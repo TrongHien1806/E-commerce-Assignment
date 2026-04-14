@@ -24,11 +24,11 @@ type AdminOrder = {
 const statusOrder: OrderStatus[] = ['Pending', 'Cooking', 'Delivering', 'Completed', 'Cancelled'];
 
 const statusLabel: Record<OrderStatus, string> = {
-  Pending: 'Cho xu ly',
-  Cooking: 'Dang che bien',
-  Delivering: 'Dang giao',
-  Completed: 'Hoan tat',
-  Cancelled: 'Da huy'
+  Pending: 'Chờ xử lý',
+  Cooking: 'Đang chế biến',
+  Delivering: 'Đang giao',
+  Completed: 'Hoàn tất',
+  Cancelled: 'Đã hủy'
 };
 
 function nextStatus(current: OrderStatus): 'Cooking' | 'Delivering' | 'Completed' | null {
@@ -53,8 +53,8 @@ export default function AdminOrders() {
       const data = Array.isArray(res.data?.result) ? res.data.result : [];
       setOrders(data);
     } catch (error: any) {
-      console.error('Loi tai danh sach order admin:', error);
-      setWarning(error?.response?.data?.message || 'Khong the tai danh sach don hang.');
+      console.error('Lỗi tải danh sách đơn hàng:', error);
+      setWarning(error?.response?.data?.message || 'Không thể tải danh sách đơn hàng.');
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +106,7 @@ export default function AdminOrders() {
       await api.patch(`/orders/${order._id}/status`, { status: next });
       setOrders((prev) => prev.map((item) => (item._id === order._id ? { ...item, status: next } : item)));
     } catch (error: any) {
-      setWarning(error?.response?.data?.message || 'Khong the cap nhat trang thai don hang.');
+      setWarning(error?.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng.');
     } finally {
       setIsActingOrderId(null);
     }
@@ -121,7 +121,7 @@ export default function AdminOrders() {
       await api.patch(`/orders/${order._id}/cancel`);
       setOrders((prev) => prev.map((item) => (item._id === order._id ? { ...item, status: 'Cancelled' } : item)));
     } catch (error: any) {
-      setWarning(error?.response?.data?.message || 'Khong the huy don hang nay.');
+      setWarning(error?.response?.data?.message || 'Không thể hủy đơn hàng này.');
     } finally {
       setIsActingOrderId(null);
     }
@@ -175,7 +175,7 @@ export default function AdminOrders() {
                 <div className="space-y-3">
                   {groupedOrders[status].length === 0 ? (
                     <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 text-center">
-                      Chua co don hang.
+                      Chưa có đơn hàng.
                     </div>
                   ) : (
                     groupedOrders[status].map((order) => {
@@ -196,8 +196,8 @@ export default function AdminOrders() {
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-600">
-                            <p>Goi: <span className="font-bold text-gray-800">{order.packageType || 'ONE_DAY'}</span></p>
-                            <p>Thanh toan: <span className="font-bold text-gray-800">{order.payment?.method || 'N/A'}</span></p>
+                            <p>Gói: <span className="font-bold text-gray-800">{order.packageType || 'ONE_DAY'}</span></p>
+                            <p>Thanh tóan: <span className="font-bold text-gray-800">{order.payment?.method || 'N/A'}</span></p>
                             <p>Payment status: <span className="font-bold text-gray-800">{order.payment?.status || 'Pending'}</span></p>
                             <p>Shipping: <span className="font-bold text-gray-800">{Math.round(order.shippingFee || 0).toLocaleString('vi-VN')} đ</span></p>
                           </div>
@@ -211,7 +211,7 @@ export default function AdminOrders() {
                                 className="inline-flex items-center gap-2 px-3 h-9 rounded-xl bg-blue-600 text-white text-xs font-black disabled:opacity-50"
                               >
                                 {next === 'Cooking' ? <ChefHat size={14} /> : next === 'Delivering' ? <Truck size={14} /> : <CheckCircle2 size={14} />}
-                                Chuyen sang {statusLabel[next]}
+                                Chuyển sang {statusLabel[next]}
                               </button>
                             ) : null}
 
@@ -222,7 +222,7 @@ export default function AdminOrders() {
                                 onClick={() => handleCancel(order)}
                                 className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 text-xs font-black disabled:opacity-50"
                               >
-                                <XCircle size={14} /> Huy don
+                                <XCircle size={14} /> Hủy đơn hàng
                               </button>
                             ) : null}
                           </div>

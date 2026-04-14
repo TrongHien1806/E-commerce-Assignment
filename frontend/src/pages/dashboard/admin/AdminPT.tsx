@@ -222,14 +222,14 @@ export default function AdminPT() {
               />
             </div>
             <div className="ml-auto rounded-xl bg-white border border-gray-100 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
-              Tong PT: {ptUsers.length}
+              Tổng PT: {ptUsers.length}
             </div>
           </div>
 
           <section className="bg-white rounded-2xl border border-gray-100 p-4 md:p-5 space-y-3">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quan ly goi tap va review theo PT</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quản lý gói tập và review theo PT</p>
             <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <label className="text-sm font-semibold text-gray-700">Chon PT:</label>
+              <label className="text-sm font-semibold text-gray-700">Chọn PT:</label>
               <select
                 value={selectedPTId || ''}
                 onChange={(e) => loadPTDetailPanel(e.target.value)}
@@ -260,7 +260,7 @@ export default function AdminPT() {
                 {ptUsers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500 font-medium">
-                      Khong co tai khoan PT phu hop.
+                      Không có tài khoản PT phù hợp.
                     </td>
                   </tr>
                 ) : (
@@ -332,7 +332,7 @@ export default function AdminPT() {
                               className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-blue-200 text-blue-600 text-xs font-black"
                             >
                               <Eye size={14} />
-                              Goi & Review
+                              Gói & Review
                             </button>
                           </div>
                         </td>
@@ -346,27 +346,27 @@ export default function AdminPT() {
 
           {selectedPTId ? (
             <section className="space-y-4">
-              <h3 className="text-lg font-black text-gray-900">Bang dieu khien goi PT va review</h3>
+              <h3 className="text-lg font-black text-gray-900">Bảng điều khiển gói PT và review</h3>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <section className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-black text-gray-900">Quan ly goi PT</h3>
+                  <h3 className="text-lg font-black text-gray-900">Quản lý gói PT</h3>
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">PT: {selectedPTId.slice(-8)}</span>
                 </div>
 
                 {isLoadingDetail ? (
-                  <div className="py-8 text-center text-sm text-gray-500">Dang tai du lieu...</div>
+                  <div className="py-8 text-center text-sm text-gray-500">Đang tải dữ liệu...</div>
                 ) : selectedPTServices.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-gray-500">PT nay chua co goi nao.</div>
+                  <div className="py-8 text-center text-sm text-gray-500">PT này chưa có gói nào.</div>
                 ) : (
                   <div className="space-y-3">
                     {selectedPTServices.map((service) => (
                       <article key={service._id} className="rounded-2xl border border-gray-100 p-4">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <p className="text-sm font-black text-gray-900">{service.title || 'Goi PT'}</p>
+                            <p className="text-sm font-black text-gray-900">{service.title || 'Gói PT'}</p>
                             <p className="text-xs text-gray-500 mt-1">
-                              {Number(service.sessions || 0)} buoi • {Number(service.durationDays || 0)} ngay • {Math.round(Number(service.price || 0)).toLocaleString('vi-VN')} d
+                              {Number(service.sessions || 0)} buổi • {Number(service.durationDays || 0)} ngày • {Math.round(Number(service.price || 0)).toLocaleString('vi-VN')} vnd
                             </p>
                           </div>
                           <button
@@ -376,7 +376,7 @@ export default function AdminPT() {
                             className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 text-xs font-black disabled:opacity-50"
                           >
                             <Trash2 size={14} />
-                            {isActingServiceId === service._id ? 'Dang an...' : 'An goi'}
+                            {isActingServiceId === service._id ? 'Đang ẩn...' : 'Ẩn gói'}
                           </button>
                         </div>
                       </article>
@@ -386,12 +386,12 @@ export default function AdminPT() {
               </section>
 
               <section className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-6 space-y-4">
-                <h3 className="text-lg font-black text-gray-900">Quan ly review PT</h3>
+                <h3 className="text-lg font-black text-gray-900">Quản lý review PT</h3>
 
                 {isLoadingDetail ? (
-                  <div className="py-8 text-center text-sm text-gray-500">Dang tai du lieu...</div>
+                  <div className="py-8 text-center text-sm text-gray-500">Đang tải dữ liệu...</div>
                 ) : selectedPTReviews.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-gray-500">PT nay chua co review nao.</div>
+                  <div className="py-8 text-center text-sm text-gray-500">PT này chưa có review nào.</div>
                 ) : (
                   <div className="space-y-3">
                     {selectedPTReviews.map((review) => (
@@ -405,10 +405,10 @@ export default function AdminPT() {
                             className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 text-xs font-black disabled:opacity-50"
                           >
                             <Trash2 size={14} />
-                            {isDeletingReviewId === review._id ? 'Dang xoa...' : 'Xoa review'}
+                            {isDeletingReviewId === review._id ? 'Đang xóa...' : 'Xóa review'}
                           </button>
                         </div>
-                        <p className="mt-2 text-sm text-gray-600">{review.comment || 'Khong co noi dung'}</p>
+                        <p className="mt-2 text-sm text-gray-600">{review.comment || 'Không có nội dung'}</p>
                         <p className="mt-2 text-xs text-gray-400">
                           {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
                         </p>

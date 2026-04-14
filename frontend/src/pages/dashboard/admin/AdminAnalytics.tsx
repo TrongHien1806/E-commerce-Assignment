@@ -212,14 +212,14 @@ export default function AdminAnalytics() {
 
         const foodNameMap = new Map<string, string>();
         for (const food of foods) {
-          foodNameMap.set(String(food._id), food.name || `Mon ${String(food._id).slice(-6)}`);
+          foodNameMap.set(String(food._id), food.name || `Món ${String(food._id).slice(-6)}`);
         }
 
         const sellerList = Array.from(currentSalesByFood.entries())
           .map(([foodId, sales], idx) => {
             const previous = previousSalesByFood.get(foodId) || 0;
             return {
-              name: foodNameMap.get(foodId) || `Mon ${foodId.slice(-6)}`,
+              name: foodNameMap.get(foodId) || `Món ${foodId.slice(-6)}`,
               sales,
               growth: formatGrowth(percentageChange(sales, previous)),
               color: sellerColors[idx % sellerColors.length]
@@ -231,8 +231,8 @@ export default function AdminAnalytics() {
 
         setTopSellers(sellerList);
       } catch (error: any) {
-        console.error('Loi tai admin analytics:', error);
-        setWarning(error?.response?.data?.message || 'Khong the tai du lieu thong ke admin.');
+        console.error('Lỗi tải dữ liệu:', error);
+        setWarning(error?.response?.data?.message || 'Không thể tải dữ liệu thống kê admin.');
       } finally {
         setIsLoading(false);
       }
@@ -280,7 +280,7 @@ export default function AdminAnalytics() {
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="admin" />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header title="Bao cao Thong ke" userRole="Quan tri vien" hideSearch={true} />
+        <Header title="Báo cáo Thống kê" userRole="Quản trị viên" hideSearch={true} />
 
         <main className="p-8 space-y-8 overflow-y-auto min-w-0">
           {warning ? (
@@ -292,11 +292,11 @@ export default function AdminAnalytics() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 flex items-center justify-between">
               <div className="space-y-2">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nguoi dung moi (7 ngay)</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Người dùng mới (7 ngày)</p>
                 <h3 className="text-4xl font-black text-gray-900">{newUsersThisWeek.toLocaleString('vi-VN')}</h3>
                 <div className={cn('flex items-center gap-2 font-bold text-sm', showUpUsers ? 'text-green-500' : 'text-red-500')}>
                   {showUpUsers ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                  <span>{formatGrowth(newUsersGrowth)} so voi 7 ngay truoc</span>
+                  <span>{formatGrowth(newUsersGrowth)} so với 7 ngày trước </span>
                 </div>
               </div>
               <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center text-blue-500">
@@ -306,11 +306,11 @@ export default function AdminAnalytics() {
 
             <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 flex items-center justify-between">
               <div className="space-y-2">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tong suat an da ban (7 ngay)</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tổng suất ăn đã bán (7 ngày)</p>
                 <h3 className="text-4xl font-black text-gray-900">{mealsSoldThisWeek.toLocaleString('vi-VN')}</h3>
                 <div className={cn('flex items-center gap-2 font-bold text-sm', showUpMeals ? 'text-green-500' : 'text-red-500')}>
                   {showUpMeals ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                  <span>{formatGrowth(mealsGrowth)} so voi 7 ngay truoc</span>
+                  <span>{formatGrowth(mealsGrowth)} so với 7 ngày trước </span>
                 </div>
               </div>
               <div className="w-16 h-16 bg-orange-50 rounded-3xl flex items-center justify-center text-orange-500">
@@ -322,8 +322,8 @@ export default function AdminAnalytics() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 space-y-6">
               <div>
-                <h2 className="text-xl font-black text-gray-900">Tang truong nguoi dung</h2>
-                <p className="text-xs text-gray-400 font-medium mt-1">So dang ky moi theo tung ngay trong 7 ngay gan nhat</p>
+                <h2 className="text-xl font-black text-gray-900">Tăng trưởng người dùng</h2>
+                <p className="text-xs text-gray-400 font-medium mt-1">Số đăng ký mới theo từng ngày trong 7 ngày gần nhất</p>
               </div>
 
               <div className="h-[320px] w-full">
@@ -350,12 +350,12 @@ export default function AdminAnalytics() {
             </div>
 
             <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 space-y-6">
-              <h2 className="text-xl font-black text-gray-900">Top 5 ban chay</h2>
+              <h2 className="text-xl font-black text-gray-900">Top 5 bán chạy</h2>
 
               <div className="space-y-4">
                 {topSellers.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 text-center">
-                    Chua du du lieu don hoan tat de xep hang.
+                    Chưa đủ dữ liệu để xếp hạng.
                   </div>
                 ) : (
                   topSellers.map((item, idx) => (
@@ -369,7 +369,7 @@ export default function AdminAnalytics() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-gray-900 truncate">{item.name}</p>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.sales} suat</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.sales} suất</p>
                         </div>
                       </div>
                       <div
@@ -393,15 +393,22 @@ export default function AdminAnalytics() {
                         <Cell key={item.name} fill={item.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `${Math.round(value).toLocaleString('vi-VN')} d`} />
+                    <Tooltip
+                      formatter={(value) => {
+                        const rawValue = Array.isArray(value) ? value[0] : value;
+                        const numericValue = Number(rawValue ?? 0);
+                        const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+                        return `${Math.round(safeValue).toLocaleString('vi-VN')} vnd`;
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="space-y-1 text-xs text-gray-600">
-                <p>Doanh thu tong: <span className="font-black text-gray-900">{Math.round(stats?.revenue?.overall?.totalAmount || 0).toLocaleString('vi-VN')} d</span></p>
-                <p>Don hoan tat: <span className="font-black text-gray-900">{(stats?.revenue?.overall?.completedOrders || 0).toLocaleString('vi-VN')}</span></p>
-                <p>Khach hang: <span className="font-black text-gray-900">{(stats?.users?.customers || 0).toLocaleString('vi-VN')}</span></p>
+                <p>Doanh thu tổng: <span className="font-black text-gray-900">{Math.round(stats?.revenue?.overall?.totalAmount || 0).toLocaleString('vi-VN')}vnd</span></p>
+                <p>Đơn hoàn tất: <span className="font-black text-gray-900">{(stats?.revenue?.overall?.completedOrders || 0).toLocaleString('vi-VN')}</span></p>
+                <p>Khách hàng: <span className="font-black text-gray-900">{(stats?.users?.customers || 0).toLocaleString('vi-VN')}</span></p>
                 <p>PT: <span className="font-black text-gray-900">{(stats?.users?.pts || 0).toLocaleString('vi-VN')}</span></p>
               </div>
             </div>
