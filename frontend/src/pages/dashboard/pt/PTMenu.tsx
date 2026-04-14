@@ -98,8 +98,8 @@ export default function PTMenu() {
       });
       setServices(ownServices);
     } catch (error) {
-      console.error('Loi tai du lieu PT menu:', error);
-      setWarning('Khong the tai danh sach goi PT. Vui long thu lai.');
+      console.error('Lỗi tải dữ liệu PT:', error);
+      setWarning('Không thể tải danh sách gói PT. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -161,7 +161,7 @@ export default function PTMenu() {
       };
 
       if (!payload.title || !payload.description || payload.price <= 0 || payload.sessions <= 0 || payload.durationDays <= 0) {
-        setWarning('Vui long nhap day du thong tin va cac gia tri lon hon 0.');
+        setWarning('Vui lòng nhập đầy đủ thông tin và các giá trị lớn hơn 0.');
         return;
       }
 
@@ -185,7 +185,7 @@ export default function PTMenu() {
       setForm(emptyForm);
       setEditingServiceId(null);
     } catch (error: any) {
-      setWarning(error?.response?.data?.message || 'Khong the luu goi PT.');
+      setWarning(error?.response?.data?.message || 'Không thể lưu gói PT.');
     } finally {
       setIsSaving(false);
     }
@@ -201,7 +201,7 @@ export default function PTMenu() {
         setServices((prev) => prev.map((item) => (item._id === serviceId ? { ...item, isActive: false } : item)));
       }
     } catch (error: any) {
-      setWarning(error?.response?.data?.message || 'Khong the an goi PT nay.');
+      setWarning(error?.response?.data?.message || 'Không thể xóa gói PT này.');
     }
   };
 
@@ -216,14 +216,14 @@ export default function PTMenu() {
     );
   }
 
-  const modalTitle = editingServiceId ? 'Cap nhat goi PT' : 'Tao goi PT moi';
+  const modalTitle = editingServiceId ? 'Cập nhật gói PT' : 'Tạo gói PT mới';
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar role="pt" />
       
       <div className="flex-1 flex flex-col">
-        <Header title="Quan ly goi PT" userName={me?.username} userRole="Huấn luyện viên" hideSearch={true} />
+        <Header title="Quản lý gói PT" userName={me?.username} userRole="Huấn luyện viên" hideSearch={true} />
         
         <main className="p-8 space-y-8 overflow-y-auto">
           {warning ? (
@@ -241,7 +241,7 @@ export default function PTMenu() {
                   activeTab === 'all' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-gray-400 hover:text-gray-600"
                 )}
               >
-                Tat ca (gom da an)
+                Tất cả
               </button>
               <button 
                 onClick={() => setActiveTab('active')}
@@ -250,7 +250,7 @@ export default function PTMenu() {
                   activeTab === 'active' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-gray-400 hover:text-gray-600"
                 )}
               >
-                Dang hoat dong
+                Đang hoạt động
               </button>
               <button
                 onClick={() => setActiveTab('inactive')}
@@ -259,7 +259,7 @@ export default function PTMenu() {
                   activeTab === 'inactive' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-gray-400 hover:text-gray-600"
                 )}
               >
-                Da an
+                Đã ẩn
               </button>
             </div>
 
@@ -279,7 +279,7 @@ export default function PTMenu() {
                 className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-200"
               >
                 <Plus size={20} />
-                Tao goi PT moi
+                Tạo gói PT
               </button>
             </div>
           </div>
@@ -293,7 +293,7 @@ export default function PTMenu() {
                     'px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-wider',
                     service.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                   )}>
-                    {service.isActive ? 'Active' : 'Hidden'}
+                    {service.isActive ? 'Đang hoạt động' : 'Đã ẩn'}
                   </span>
                 </div>
 
@@ -301,15 +301,15 @@ export default function PTMenu() {
 
                 <div className="grid grid-cols-3 gap-2 text-center py-3 border-y border-gray-100">
                   <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Buoi</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Buổi</p>
                     <p className="text-sm font-black text-gray-900">{service.sessions}</p>
                   </div>
                   <div className="border-x border-gray-100">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Ngay</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Ngày</p>
                     <p className="text-sm font-black text-gray-900">{service.durationDays}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Gia</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Giá</p>
                     <p className="text-sm font-black text-gray-900">{Math.round(service.price || 0).toLocaleString('vi-VN')} đ</p>
                   </div>
                 </div>
@@ -320,14 +320,14 @@ export default function PTMenu() {
                     onClick={() => openEditModal(service)}
                     className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors"
                   >
-                    <Pencil size={14} /> Sua
+                    <Pencil size={14} /> Sửa
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(service._id)}
                     className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    <Trash2 size={14} /> An
+                    <Trash2 size={14} /> Ẩn
                   </button>
                 </div>
               </article>
@@ -336,7 +336,7 @@ export default function PTMenu() {
           
           {filteredServices.length === 0 && (
             <div className="text-center py-20">
-              <p className="text-gray-400 font-bold">Khong tim thay goi PT phu hop...</p>
+              <p className="text-gray-400 font-bold">Không tìm thấy gói PT phù hợp...</p>
             </div>
           )}
         </main>
@@ -355,19 +355,19 @@ export default function PTMenu() {
 
             <form onSubmit={handleSubmitForm} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ten goi PT</label>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tên gói PT</label>
                 <input 
                   type="text" 
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="VD: PT Tang Co 12 Buoi" 
+                  placeholder="VD: PT ăng Cân 12 Buổi" 
                   className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold" 
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mo ta</label>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mô tả</label>
                 <textarea
                   required
                   value={form.description}
@@ -379,7 +379,7 @@ export default function PTMenu() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gia (VND)</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Giá (VND)</label>
                   <input 
                     type="number" 
                     value={form.price}
@@ -389,7 +389,7 @@ export default function PTMenu() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">So buoi</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Số buổi</label>
                   <input 
                     type="number" 
                     value={form.sessions}
@@ -399,7 +399,7 @@ export default function PTMenu() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">So ngay</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Số ngày</label>
                   <input 
                     type="number" 
                     value={form.durationDays}
@@ -416,11 +416,11 @@ export default function PTMenu() {
                   checked={form.isActive}
                   onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
                 />
-                Dang mo ban
+                Đang mở bán
               </label>
 
               <Button type="submit" disabled={isSaving} className="w-full py-8 bg-indigo-600 text-white rounded-3xl font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all">
-                {isSaving ? 'Dang luu...' : editingServiceId ? 'Luu thay doi' : 'Tao goi PT'}
+                {isSaving ? 'Đang lưu...' : editingServiceId ? 'Lưu thay đổi' : 'Tạo gói PT'}
               </Button>
             </form>
           </div>

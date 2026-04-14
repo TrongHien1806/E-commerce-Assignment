@@ -110,8 +110,8 @@ export default function PTProfile() {
       setClients(Array.isArray(clientsRes.data?.result) ? clientsRes.data.result : []);
       setReviews(Array.isArray(reviewsRes.data?.result) ? reviewsRes.data.result : []);
     } catch (error) {
-      console.error('Loi tai PT profile:', error);
-      setWarning('Khong the tai du lieu hoc vien/goi PT. Vui long thu lai.');
+      console.error('Lỗi tải PT profile:', error);
+      setWarning('Không thể tải dữ liệu. Vui lòng thử lại sau.');
     } finally {
       setIsLoading(false);
     }
@@ -139,12 +139,12 @@ export default function PTProfile() {
         const parsed = parseRegistration(reg);
         if (!parsed.serviceId || !serviceMap.has(parsed.serviceId)) continue;
 
-        const serviceTitle = serviceMap.get(parsed.serviceId)?.title || 'Goi PT';
+        const serviceTitle = serviceMap.get(parsed.serviceId)?.title || 'Gói PT';
 
         list.push({
           key: `${client._id}-${parsed.serviceId}`,
           clientId: client._id,
-          clientName: client.username || 'Khach hang',
+          clientName: client.username || 'Khách hàng ẩn danh',
           contact: client.email || client.phone || 'N/A',
           serviceId: parsed.serviceId,
           serviceTitle,
@@ -165,7 +165,7 @@ export default function PTProfile() {
       await api.patch(`/pt/clients/${row.clientId}/services/${row.serviceId}/check-in`);
       await fetchData();
     } catch (error: any) {
-      setWarning(error?.response?.data?.message || 'Check-in that bai.');
+      setWarning(error?.response?.data?.message || 'Check-in thất bại.');
     } finally {
       setIsCheckingIn(null);
     }
@@ -187,7 +187,7 @@ export default function PTProfile() {
       <Sidebar role="pt" />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Header title="Hoc vien & PT profile" userName={me?.username} userRole="Huấn luyện viên" hideSearch={true} />
+        <Header title="Học viên & PT profile" userName={me?.username} userRole="Huấn luyện viên" hideSearch={true} />
 
         <main className="p-8 space-y-8 overflow-y-auto min-w-0">
           {warning ? (
@@ -203,7 +203,7 @@ export default function PTProfile() {
                   <UserCircle size={20} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tai khoan PT</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tài khoản PT</p>
                   <p className="text-sm font-black text-gray-900">{me?.email || 'N/A'}</p>
                 </div>
               </div>
@@ -215,7 +215,7 @@ export default function PTProfile() {
                   <ClipboardList size={20} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Goi PT cua ban</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gói PT của bạn</p>
                   <p className="text-2xl font-black text-gray-900">{services.length}</p>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function PTProfile() {
                   <Clock3 size={20} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Luot dang ky</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Lượt đăng ký</p>
                   <p className="text-2xl font-black text-gray-900">{rows.length}</p>
                 </div>
               </div>
@@ -235,37 +235,37 @@ export default function PTProfile() {
           </section>
 
           <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
-            <h2 className="text-xl font-black text-gray-900">Thong tin PT</h2>
+            <h2 className="text-xl font-black text-gray-900">Thông tin PT</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <p><span className="font-black">Ho ten:</span> {me?.username || 'N/A'}</p>
+              <p><span className="font-black">Họ tên:</span> {me?.username || 'N/A'}</p>
               <p><span className="font-black">Email:</span> {me?.email || 'N/A'}</p>
-              <p><span className="font-black">So dien thoai:</span> {me?.phone || 'N/A'}</p>
-              <p><span className="font-black">Kinh nghiem:</span> {Number(me?.ptProfile?.experienceYears || 0)} nam</p>
-              <p><span className="font-black">Danh gia:</span> {Number(me?.ptProfile?.rating || 0).toFixed(1)}</p>
-              <p><span className="font-black">Trang thai duyet:</span> {me?.ptProfile?.approvedByAdmin ? 'Da duyet' : 'Chua duyet'}</p>
+              <p><span className="font-black">Số điện thoại:</span> {me?.phone || 'N/A'}</p>
+              <p><span className="font-black">Kinh nghiệm:</span> {Number(me?.ptProfile?.experienceYears || 0)} năm</p>
+              <p><span className="font-black">Dánh gia:</span> {Number(me?.ptProfile?.rating || 0).toFixed(1)}</p>
+              <p><span className="font-black">Trạng thái duyệt:</span> {me?.ptProfile?.approvedByAdmin ? 'Đã duyệt' : 'Chưa duyệt'}</p>
             </div>
-            <p className="text-sm"><span className="font-black">Chuyen mon:</span> {(me?.ptProfile?.specialties || []).join(', ') || 'Chua cap nhat'}</p>
+            <p className="text-sm"><span className="font-black">Chuyên môn:</span> {(me?.ptProfile?.specialties || []).join(', ') || 'Chưa cập nhật'}</p>
           </section>
 
           <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
-            <h2 className="text-xl font-black text-gray-900">Danh sach hoc vien va check-in</h2>
+            <h2 className="text-xl font-black text-gray-900">Danh sách học viên và check-in</h2>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left">
                 <thead>
                   <tr className="border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    <th className="pb-4">Hoc vien</th>
-                    <th className="pb-4">Lien he</th>
-                    <th className="pb-4">Goi PT</th>
-                    <th className="pb-4">Con lai</th>
-                    <th className="pb-4">Dang ky</th>
-                    <th className="pb-4">Hanh dong</th>
+                    <th className="pb-4">Học viên</th>
+                    <th className="pb-4">Liên hệ</th>
+                    <th className="pb-4">Gói PT</th>
+                    <th className="pb-4">Còn lại</th>
+                    <th className="pb-4">Đăng ký</th>
+                    <th className="pb-4">Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {rows.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-sm font-medium text-gray-500">
-                        Chua co hoc vien dang ky goi cua ban.
+                        Chưa có học viên đăng ký gói của bạn.
                       </td>
                     </tr>
                   ) : (
@@ -283,7 +283,7 @@ export default function PTProfile() {
                             onClick={() => handleCheckIn(row)}
                             className="px-3 h-9 rounded-xl bg-indigo-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {isCheckingIn === row.key ? 'Dang tru buoi...' : 'Check-in'}
+                            {isCheckingIn === row.key ? 'Đang trừ buổi...' : 'Check-in'}
                           </button>
                         </td>
                       </tr>
@@ -296,21 +296,21 @@ export default function PTProfile() {
 
           <section className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900">Review ve PT cua ban</h2>
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tong: {reviews.length}</span>
+              <h2 className="text-xl font-black text-gray-900">Review về PT của bạn</h2>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tổng: {reviews.length}</span>
             </div>
 
             {reviews.length === 0 ? (
-              <p className="text-sm text-gray-500">Chua co review nao.</p>
+              <p className="text-sm text-gray-500">Chưa có review nào.</p>
             ) : (
               <div className="space-y-3">
                 {reviews.map((review) => (
                   <article key={review._id} className="rounded-2xl border border-gray-100 p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-bold text-gray-800">Nguoi dung {String(review.reviewerId || '').slice(-6)}</p>
+                      <p className="text-sm font-bold text-gray-800">Người dùng {String(review.reviewerId || '').slice(-6)}</p>
                       <p className="text-sm font-black text-amber-600">{Number(review.rating || 0).toFixed(1)} / 5</p>
                     </div>
-                    <p className="mt-2 text-sm text-gray-600">{review.comment || 'Khong co noi dung'}</p>
+                    <p className="mt-2 text-sm text-gray-600">{review.comment || 'Không có nội dung'}</p>
                     <p className="mt-2 text-xs text-gray-400">
                       {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
                     </p>
