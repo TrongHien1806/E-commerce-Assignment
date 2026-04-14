@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, SlidersHorizontal, Plus, Flame, ShoppingCart, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -22,6 +22,8 @@ const categoryToTagsMap: Record<string, string[]> = {
 
 export default function UserMenu() {
   const [activeCategory, setActiveCategory] = useState('Tất cả');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'default' | 'priceAsc' | 'priceDesc' | 'caloriesAsc' | 'caloriesDesc' | 'nameAsc'>('default');
   
   // State tìm kiếm
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,6 +34,7 @@ export default function UserMenu() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const filterRef = useRef<HTMLDivElement | null>(null);
   
   const { addItem, items } = useCart();
 
@@ -40,6 +43,21 @@ export default function UserMenu() {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Đóng menu lọc khi click ra ngoài
+  useEffect(() => {
+    if (!isFilterOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!filterRef.current) return;
+      if (!filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isFilterOpen]);
 
   // Bất cứ khi nào đổi Từ khóa tìm kiếm hoặc Danh mục -> Trở về trang 1
   useEffect(() => {
@@ -87,6 +105,25 @@ export default function UserMenu() {
     fetchFoods();
   }, [page, debouncedSearch, activeCategory]);
 
+  const displayedFoods = useMemo(() => {
+    const clonedFoods = [...foodItems];
+
+    switch (sortBy) {
+      case 'priceAsc':
+        return clonedFoods.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+      case 'priceDesc':
+        return clonedFoods.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+      case 'caloriesAsc':
+        return clonedFoods.sort((a, b) => Number(a.calories || 0) - Number(b.calories || 0));
+      case 'caloriesDesc':
+        return clonedFoods.sort((a, b) => Number(b.calories || 0) - Number(a.calories || 0));
+      case 'nameAsc':
+        return clonedFoods.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
+      default:
+        return clonedFoods;
+    }
+  }, [foodItems, sortBy]);
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Sidebar role="user" />
@@ -114,12 +151,50 @@ export default function UserMenu() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button
-                variant="outline"
-                className="rounded-xl aspect-square p-0 w-10 h-10"
-              >
-                <SlidersHorizontal size={20} />
-              </Button>
+              <div className="relative" ref={filterRef}>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'rounded-xl aspect-square p-0 w-10 h-10',
+                    sortBy !== 'default' && 'border-orange-300 text-orange-600 bg-orange-50 hover:bg-orange-100'
+                  )}
+                  onClick={() => setIsFilterOpen((prev) => !prev)}
+                >
+                  <SlidersHorizontal size={20} />
+                </Button>
+
+                {isFilterOpen && (
+                  <div className="absolute right-0 mt-2 z-30 w-64 rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
+                    <p className="px-3 py-2 text-[11px] font-black tracking-widest text-gray-400 uppercase">Sắp xếp nhanh</p>
+
+                    {[
+                      { key: 'default', label: 'Mặc định' },
+                      { key: 'priceAsc', label: 'Giá: thấp đến cao' },
+                      { key: 'priceDesc', label: 'Giá: cao đến thấp' },
+                      { key: 'caloriesAsc', label: 'Calories: thấp đến cao' },
+                      { key: 'caloriesDesc', label: 'Calories: cao đến thấp' },
+                      { key: 'nameAsc', label: 'Tên món: A - Z' }
+                    ].map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => {
+                          setSortBy(option.key as typeof sortBy);
+                          setIsFilterOpen(false);
+                        }}
+                        className={cn(
+                          'w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors',
+                          sortBy === option.key
+                            ? 'bg-orange-50 text-orange-600'
+                            : 'text-gray-600 hover:bg-gray-50'
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -151,7 +226,7 @@ export default function UserMenu() {
             <>
               {/* Product Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {foodItems.map((food, index) => (
+                {displayedFoods.map((food, index) => (
                   <Link to={`/food/${food._id}`} key={food._id}>
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -219,7 +294,7 @@ export default function UserMenu() {
               </div>
 
               {/* Giao diện Rỗng */}
-              {foodItems.length === 0 && (
+              {displayedFoods.length === 0 && (
                 <div className="text-center py-20">
                   <p className="text-gray-400 font-bold">
                     Không tìm thấy món ăn phù hợp...
