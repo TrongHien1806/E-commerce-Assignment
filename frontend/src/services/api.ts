@@ -1,5 +1,6 @@
 import axios from "axios";
 
+// Cách 1: Dùng cứng link Render (để test cho chắc chắn chạy được)
 const api = axios.create({
   baseURL: "https://e-commerce-7jh5.onrender.com",
 });
