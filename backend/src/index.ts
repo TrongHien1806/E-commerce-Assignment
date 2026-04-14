@@ -27,7 +27,7 @@ databaseService.connect().then(async () => {
 const app = express()
 app.use(
   cors({
-    origin: 'http://localhost:3000'
+    origin: process.env.CLIENT_URL || 'http://localhost:3000'
   })
 )
 
@@ -44,10 +44,10 @@ app.use('/tracking', trackingRouter)
 app.use('/reviews', reviewsRouter)
 
 // 1. Phải cấp quyền public thư mục 'uploads' thì Frontend mới xem được ảnh
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads'))
 
 // 2. Đăng ký route medias
-app.use('/medias', mediasRouter);
+app.use('/medias', mediasRouter)
 
 app.use('/admin', adminRouter)
 
