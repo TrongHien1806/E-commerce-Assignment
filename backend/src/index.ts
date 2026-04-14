@@ -25,9 +25,23 @@ databaseService.connect().then(async () => {
   // await autogenerateTweets()
 })
 const app = express()
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://e-commerce-mauve-xi.vercel.app',
+  'https://e-commerce-git-haobranch-phongwd2311s-projects.vercel.app'
+]
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000'
+    origin: function (origin, callback) {
+      // Cho phép các yêu cầu không có origin (như Postman) hoặc nằm trong danh sách allowedOrigins
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true)
+      } else {
+        callback(new Error('CORS chặn: Link này không có quyền truy cập!'))
+      }
+    },
+    credentials: true
   })
 )
 
