@@ -4,6 +4,7 @@ import {
   createPTServiceController,
   deletePTServiceController,
   getPTClientsController,
+  getMyPTServiceListController,
   getPTServiceDetailController,
   getPTServiceListController,
   getPTUserByUsernameController,
@@ -22,6 +23,15 @@ const ptRouter = Router()
  * Query: { limit?: number, page?: number }
  */
 ptRouter.get('/services', wrapRequestHandler(getPTServiceListController))
+
+/**
+ * Description. Get current PT's own service list (includes active and inactive)
+ * Path: /my-services
+ * Method: GET
+ * Header: { Authorization: Bearer <access_token> }
+ * Query: { limit?: number, page?: number, search?: string }
+ */
+ptRouter.get('/my-services', accessTokenValidator, wrapRequestHandler(getMyPTServiceListController))
 
 /**
  * Description. Get PT service detail by service id

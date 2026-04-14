@@ -110,3 +110,20 @@ export const checkInClientController = async (req: Request, res: Response) => {
   const result = await ptService.checkInClientSession(decoded_authorization.user_id, client_id, service_id)
   return res.status(HTTP_STATUS.OK).json(result)
 }
+
+export const getMyPTServiceListController = async (
+  req: Request<Record<string, never>, Record<string, never>, Record<string, never>, PTServiceListQuery & { search?: string }>,
+  res: Response
+) => {
+  const decoded_authorization = (req as unknown as { decoded_authorization: TokenPayload }).decoded_authorization
+  const limit = Math.max(1, Number(req.query.limit) || 10)
+  const page = Math.max(1, Number(req.query.page) || 1)
+  const search = String(req.query.search || '').trim()
+
+  const result = await ptService.getMyPTServiceList(decoded_authorization.user_id, limit, page, search)
+
+  return res.status(HTTP_STATUS.OK).json({
+    message: 'Lấy danh sách gói PT của bạn thành công',
+    result
+  })
+}

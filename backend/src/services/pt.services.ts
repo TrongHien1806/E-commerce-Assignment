@@ -3,9 +3,32 @@ import databaseService from './database.services'
 import PTService from '~/models/schemas/PTService.schema'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { ErrorWithStatus } from '~/models/Errors'
-import { UserRole } from '~/models/schemas/User.schema'
+import { AccountStatus, UserRole } from '~/models/schemas/User.schema'
 
 class PTServiceLayer {
+  private async assertPTCanManageServices(pt_user_id: string) {
+    const ptUser = await databaseService.users.findOne(
+      { _id: new ObjectId(pt_user_id) },
+      { projection: { role: 1, account_status: 1, ptProfile: 1 } }
+    )
+
+    if (!ptUser || ptUser.role !== UserRole.PT) {
+      throw new ErrorWithStatus({
+        message: 'Chỉ PT mới có quyền thao tác tính năng này',
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
+    if (ptUser.account_status !== AccountStatus.ACTIVE || !ptUser.ptProfile?.approvedByAdmin) {
+      throw new ErrorWithStatus({
+        message: 'Tài khoản PT chưa được duyệt hoặc chưa kích hoạt',
+        status: HTTP_STATUS.FORBIDDEN
+      })
+    }
+
+    return ptUser
+  }
+
   async getPTUserByUsername(username: string) {
     return databaseService.users.findOne(
       { username, role: 'PT' as any },
@@ -23,6 +46,45 @@ class PTServiceLayer {
     const skip = (safePage - 1) * safeLimit
 
     const filter = { isActive: true }
+
+    const [services, total] = await Promise.all([
+      databaseService.ptServices.find(filter).skip(skip).limit(safeLimit).sort({ createdAt: -1 }).toArray(),
+      databaseService.ptServices.countDocuments(filter)
+    ])
+
+    return {
+      services,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        total_pages: Math.ceil(total / safeLimit)
+      }
+    }
+  }
+
+  async getMyPTServiceList(pt_user_id: string, limit: number, page: number, search?: string) {
+    if (!ObjectId.isValid(pt_user_id)) {
+      throw new ErrorWithStatus({
+        message: 'ID khong hop le',
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const safeLimit = Math.max(1, Number(limit) || 10)
+    const safePage = Math.max(1, Number(page) || 1)
+    const skip = (safePage - 1) * safeLimit
+
+    await this.assertPTCanManageServices(pt_user_id)
+
+    const query = (search || '').trim()
+    const filter: Record<string, any> = {
+      ptId: new ObjectId(pt_user_id)
+    }
+
+    if (query) {
+      filter.title = { $regex: query, $options: 'i' }
+    }
 
     const [services, total] = await Promise.all([
       databaseService.ptServices.find(filter).skip(skip).limit(safeLimit).sort({ createdAt: -1 }).toArray(),
@@ -130,6 +192,7 @@ class PTServiceLayer {
     let resolvedPTId: ObjectId
 
     if (requester.role === UserRole.PT) {
+      await this.assertPTCanManageServices(requester_user_id)
       resolvedPTId = new ObjectId(requester_user_id)
     } else if (requester.role === UserRole.ADMIN) {
       if (!payload.ptId || !ObjectId.isValid(payload.ptId)) {
@@ -209,6 +272,10 @@ class PTServiceLayer {
       })
     }
 
+    if (requester?.role === UserRole.PT) {
+      await this.assertPTCanManageServices(requester_user_id)
+    }
+
     // 3. Thực hiện update
     const updateData: Record<string, any> = {}
     if (payload.title !== undefined) updateData.title = payload.title.trim()
@@ -245,6 +312,10 @@ class PTServiceLayer {
         message: 'Bạn không có quyền xóa gói dịch vụ của người khác',
         status: HTTP_STATUS.FORBIDDEN
       })
+    }
+
+    if (requester?.role === UserRole.PT) {
+      await this.assertPTCanManageServices(requester_user_id)
     }
 
     const updated = await databaseService.ptServices.findOneAndUpdate(
@@ -312,6 +383,8 @@ class PTServiceLayer {
   }
 
   async checkInClientSession(pt_user_id: string, client_id: string, service_id: string) {
+    await this.assertPTCanManageServices(pt_user_id)
+
     if (!ObjectId.isValid(client_id) || !ObjectId.isValid(service_id)) {
       throw new ErrorWithStatus({ message: 'ID không hợp lệ', status: HTTP_STATUS.BAD_REQUEST })
     }

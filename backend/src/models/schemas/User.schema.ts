@@ -70,6 +70,7 @@ export interface UserType {
   _id?: ObjectId
   email: string
   username: string
+  avatar?: string
   password: string
   phone: string
   role: UserRole
@@ -91,6 +92,7 @@ export default class User implements UserType {
   _id?: ObjectId
   email: string
   username: string
+  avatar?: string
   password: string
   phone: string
   role: UserRole
@@ -111,6 +113,7 @@ export default class User implements UserType {
     this._id = user._id
     this.email = user.email
     this.username = user.username
+    this.avatar = user.avatar
     this.password = user.password
     this.phone = user.phone
     this.role = user.role
