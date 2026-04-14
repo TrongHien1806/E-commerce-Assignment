@@ -127,7 +127,7 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen role-page-shell">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-orange-500" size={40} />
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen role-page-shell">
       <Sidebar />
       <div className="flex-1 min-w-0">
         <Header title="Bảng quản trị hệ thống" />

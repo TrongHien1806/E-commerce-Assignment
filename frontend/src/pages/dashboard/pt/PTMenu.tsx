@@ -207,7 +207,7 @@ export default function PTMenu() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-[#fafafa]">
+      <div className="flex min-h-screen role-page-shell">
         <Sidebar role="pt" />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-orange-500" size={40} />
@@ -219,7 +219,7 @@ export default function PTMenu() {
   const modalTitle = editingServiceId ? 'Cập nhật gói PT' : 'Tạo gói PT mới';
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa]">
+    <div className="flex min-h-screen role-page-shell">
       <Sidebar role="pt" />
       
       <div className="flex-1 flex flex-col">

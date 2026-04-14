@@ -125,7 +125,7 @@ export default function UserMenu() {
   }, [foodItems, sortBy]);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen role-page-shell overflow-hidden">
       <Sidebar role="user" />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title="Thực đơn hôm nay" userRole="Người dùng" />

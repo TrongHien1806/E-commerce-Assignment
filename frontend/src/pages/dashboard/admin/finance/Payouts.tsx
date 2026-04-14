@@ -19,7 +19,7 @@ export default function FinancePayouts() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa]">
+    <div className="flex min-h-screen role-page-shell">
       <Sidebar role="admin" />
       <div className="flex-1 flex flex-col">
         <Header title="Đối soát & Thanh toán PT" userRole="Quản trị viên" hideSearch={true} />

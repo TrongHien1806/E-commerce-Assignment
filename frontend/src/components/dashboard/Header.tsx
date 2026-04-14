@@ -330,17 +330,17 @@ export default function Header({ title, userName, userRole, avatar, hideSearch =
 
   return (
     <>
-      <header className="h-20 flex items-center justify-between px-8 bg-white/50 backdrop-blur-md sticky top-0 z-30 border-b border-gray-100">
+      <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-[color:var(--role-border)] bg-[var(--role-surface)]/80 px-8 backdrop-blur-md">
         <h1 className="text-2xl font-black text-gray-900">{title}</h1>
 
         <div className="flex items-center gap-6">
           {!hideSearch && (
             <div className="relative group hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#c1e06d] transition-colors" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-[color:var(--role-accent)]" size={18} />
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
-                className="pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#c1e06d] focus:border-transparent w-64 transition-all"
+                className="w-64 rounded-xl border border-gray-100 bg-white py-2 pl-10 pr-4 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--role-accent)_28%,white)]"
               />
             </div>
           )}
@@ -349,7 +349,7 @@ export default function Header({ title, userName, userRole, avatar, hideSearch =
             <Link to="/cart" className="relative p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all">
               <ShoppingCart size={22} />
               {items.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white">
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-[var(--role-accent)] text-[10px] font-black text-white">
                   {items.length}
                 </span>
               )}
@@ -410,7 +410,7 @@ export default function Header({ title, userName, userRole, avatar, hideSearch =
             >
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-gray-900 transition-colors uppercase">{effectiveName}</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{effectiveRole}</p>
+                <p className="text-[10px] font-bold uppercase tracking-tighter text-[color:var(--role-accent)]">{effectiveRole}</p>
               </div>
               <div className="relative">
                 <img src={effectiveAvatar} alt="Avatar" className="w-10 h-10 rounded-xl object-cover" />

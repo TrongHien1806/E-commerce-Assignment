@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { Loader2 } from 'lucide-react';
@@ -78,10 +78,52 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   return <>{children}</>;
 };
 
+const RouteThemeClassSync = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    const roleThemeClasses = ['role-theme-customer', 'role-theme-pt', 'role-theme-admin'];
+    document.body.classList.remove(...roleThemeClasses);
+
+    const pathname = location.pathname;
+    let nextThemeClass = '';
+
+    if (pathname.startsWith('/dashboard/admin')) {
+      nextThemeClass = 'role-theme-admin';
+    } else if (pathname.startsWith('/dashboard/pt') || pathname.startsWith('/dashboard/pt-view')) {
+      nextThemeClass = 'role-theme-pt';
+    } else if (
+      pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/cart') ||
+      pathname.startsWith('/checkout') ||
+      pathname.startsWith('/food-catalog') ||
+      pathname.startsWith('/food/') ||
+      pathname.startsWith('/pt-directory') ||
+      pathname.startsWith('/pt/')
+    ) {
+      nextThemeClass = 'role-theme-customer';
+    } else if (pathname === '/' && user?.role === 'Customer') {
+      nextThemeClass = 'role-theme-customer';
+    }
+
+    if (nextThemeClass) {
+      document.body.classList.add(nextThemeClass);
+    }
+
+    return () => {
+      document.body.classList.remove(...roleThemeClasses);
+    };
+  }, [location.pathname, user?.role]);
+
+  return null;
+};
+
 // ==================== App Routes ====================
 function AppRoutes() {
   return (
     <Router>
+      <RouteThemeClassSync />
       <Suspense fallback={<Loading />}>
         <Routes>
           {/* Public Routes */}

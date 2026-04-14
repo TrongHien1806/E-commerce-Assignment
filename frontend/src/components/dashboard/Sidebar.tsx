@@ -50,10 +50,10 @@ export default function Sidebar({ role }: SidebarProps) {
   const activeLinks = normalizedRole === 'Admin' ? adminLinks : normalizedRole === 'PT' ? ptLinks : customerLinks;
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0">
+    <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-[color:var(--role-border)] bg-[var(--role-surface)]/95 backdrop-blur-md">
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--role-accent)] shadow-lg shadow-[color:color-mix(in_srgb,var(--role-accent)_28%,transparent)]">
             <Utensils className="text-white" size={20} />
           </div>
           <span className="text-xl font-black text-gray-900 italic">FitBite</span>
@@ -68,7 +68,7 @@ export default function Sidebar({ role }: SidebarProps) {
             className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
               location.pathname === link.path
-                ? "bg-orange-50 text-orange-500"
+                ? "bg-[var(--role-accent-soft)] text-[color:var(--role-accent)]"
                 : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
             )}
           >

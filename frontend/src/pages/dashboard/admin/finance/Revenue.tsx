@@ -78,7 +78,7 @@ export default function FinanceRevenue() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-[#fafafa]">
+      <div className="flex min-h-screen role-page-shell">
         <Sidebar role="admin" />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-orange-500" size={40} />
@@ -112,7 +112,7 @@ export default function FinanceRevenue() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa]">
+    <div className="flex min-h-screen role-page-shell">
       <Sidebar role="admin" />
       <div className="flex-1 flex flex-col min-w-0">
         <Header title="Theo doi Doanh thu" userRole="Quan tri vien" hideSearch={true} />

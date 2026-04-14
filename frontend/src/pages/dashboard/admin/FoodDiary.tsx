@@ -96,7 +96,7 @@ export default function AdminFoodDiary() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-[#fafafa]">
+      <div className="flex min-h-screen role-page-shell">
         <Sidebar role="admin" />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-orange-500" size={40} />
@@ -106,7 +106,7 @@ export default function AdminFoodDiary() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa]">
+    <div className="flex min-h-screen role-page-shell">
       <Sidebar role="admin" />
       <div className="flex-1 flex flex-col min-w-0">
         <Header title="Nhat ky thuc pham he thong" userRole="Quan tri vien" hideSearch={true} />

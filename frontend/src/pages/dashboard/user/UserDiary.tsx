@@ -124,7 +124,7 @@ export default function UserDiary() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-[#fafafa]">
+      <div className="flex min-h-screen role-page-shell">
         <Sidebar role="user" />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-orange-500" size={40} />
@@ -134,7 +134,7 @@ export default function UserDiary() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa]">
+    <div className="flex min-h-screen role-page-shell">
       <Sidebar role="user" />
 
       <div className="flex-1 flex flex-col min-w-0">

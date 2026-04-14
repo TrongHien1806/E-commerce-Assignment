@@ -267,7 +267,7 @@ export default function AdminAnalytics() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-[#fafafa]">
+      <div className="flex min-h-screen role-page-shell">
         <Sidebar role="admin" />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-orange-500" size={40} />
@@ -277,7 +277,7 @@ export default function AdminAnalytics() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa]">
+    <div className="flex min-h-screen role-page-shell">
       <Sidebar role="admin" />
       <div className="flex-1 flex flex-col min-w-0">
         <Header title="Báo cáo Thống kê" userRole="Quản trị viên" hideSearch={true} />
