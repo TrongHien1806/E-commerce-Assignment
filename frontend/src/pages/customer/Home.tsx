@@ -33,7 +33,7 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section - SaaS Split Layout Style */}
-      <section className="relative pt-20 pb-32 overflow-hidden">
+      <section className="relative overflow-hidden pt-24 pb-20 md:pt-28 md:pb-24 lg:pt-32 lg:pb-28">
         {/* Background Accents */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
           <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-orange-100/50 rounded-full blur-[120px]" />
@@ -41,8 +41,8 @@ export default function Home() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-            <div className="flex-1 text-center lg:text-left space-y-10">
+          <div className="flex flex-col items-center gap-14 lg:flex-row lg:items-start lg:gap-20 xl:gap-24">
+            <div className="flex-1 space-y-8 text-center lg:space-y-10 lg:text-left">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -57,17 +57,19 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-6xl md:text-8xl font-black text-gray-900 leading-[0.9] tracking-tighter text-balance"
+                className="text-5xl font-black leading-[0.95] tracking-tighter text-balance text-gray-900 sm:text-6xl md:text-7xl lg:text-8xl"
               >
-                Ăn uống <span className="text-orange-500 italic font-serif font-normal">thông minh</span>, <br />
-                Sống khỏe mỗi ngày.
+                <span className="block">
+                  Ăn uống <span className="text-orange-500 italic font-serif font-normal">thông minh</span>,
+                </span>
+                <span className="mt-2 block">Sống khỏe mỗi ngày.</span>
               </motion.h1>
 
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-xl text-gray-500 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium"
+                className="mx-auto max-w-xl text-lg font-medium leading-relaxed text-gray-500 sm:text-xl lg:mx-0"
               >
                 FitBite tự động hóa việc lên thực đơn dựa trên mục tiêu của bạn. Tiết kiệm thời gian, tối ưu sức khỏe và kết nối cùng chuyên gia.
               </motion.p>
@@ -76,18 +78,18 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
+                className="flex flex-col items-center justify-center gap-4 pt-2 sm:flex-row lg:justify-start"
               >
                 <Button 
                   size="lg" 
-                  className="w-full sm:w-auto rounded-2xl px-10 h-16 text-lg font-black shadow-2xl shadow-orange-500/20 group"
+                  className="group h-14 w-full rounded-2xl px-8 text-base font-black shadow-2xl shadow-orange-500/20 sm:h-16 sm:w-auto sm:px-10 sm:text-lg"
                   onClick={() => setShowRecommendation(true)}
                 >
                   Bắt đầu ngay
                   <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
                 <Link to="/pt-directory" className="w-full sm:w-auto">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-2xl px-10 h-16 text-lg font-black border-2 hover:bg-gray-50">
+                  <Button variant="outline" size="lg" className="h-14 w-full rounded-2xl border-2 px-8 text-base font-black hover:bg-gray-50 sm:h-16 sm:w-auto sm:px-10 sm:text-lg">
                     Khám phá PT
                   </Button>
                 </Link>
@@ -97,7 +99,7 @@ export default function Home() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
-                className="flex items-center justify-center lg:justify-start gap-6 pt-4"
+                className="flex items-center justify-center gap-6 pt-2 lg:justify-start lg:pt-4"
               >
                 <div className="flex -space-x-3">
                   {[1, 2, 3, 4].map((i) => (
@@ -110,7 +112,7 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <div className="text-sm">
+                <div className="text-left text-sm">
                   <div className="flex items-center gap-1 text-orange-500">
                     {[1, 2, 3, 4, 5].map((i) => <Star key={i} size={14} fill="currentColor" />)}
                   </div>
@@ -119,7 +121,7 @@ export default function Home() {
               </motion.div>
             </div>
 
-            <div className="flex-1 relative w-full max-w-2xl lg:max-w-none">
+            <div className="relative w-full max-w-2xl flex-1 lg:max-w-none">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9, rotate: 2 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
@@ -128,18 +130,18 @@ export default function Home() {
               >
                 {/* Main App Preview Mockup */}
                 <div className="bg-white rounded-[48px] shadow-[0_32px_80px_rgba(0,0,0,0.1)] border border-gray-100 p-4 relative overflow-hidden">
-                  <div className="bg-gray-50 rounded-[36px] overflow-hidden aspect-[4/3] relative">
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-[36px] bg-gray-50">
                     <img 
-                      src="https://picsum.photos/seed/mealplan/1200/900" 
+                      src="https://res.cloudinary.com/dtxhrmafz/image/upload/v1776135129/20230830_1DiPhwh5_swyog6.jpg" 
                       alt="Meal Plan Preview" 
                       className="w-full h-full object-cover opacity-90"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    <div className="absolute bottom-8 left-8 right-8 text-white">
+                    <div className="absolute bottom-6 left-6 right-6 text-white md:bottom-8 md:left-8 md:right-8">
                       <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-2">Thực đơn hôm nay</p>
-                      <h3 className="text-3xl font-black">Salad Ức Gà & Bơ</h3>
-                      <div className="flex gap-4 mt-4">
+                      <h3 className="text-2xl font-black md:text-3xl">Salad Ức Gà & Bơ</h3>
+                      <div className="mt-4 flex flex-wrap gap-3 md:gap-4">
                         <div className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold">450 kcal</div>
                         <div className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold">35g Protein</div>
                       </div>
@@ -190,9 +192,9 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-gray-900 text-white overflow-hidden relative">
+      <section className="relative overflow-hidden bg-gray-900 py-16 text-white md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
+          <div className="grid grid-cols-2 gap-8 text-center md:grid-cols-4 md:gap-12">
             {[
               { label: "Người dùng", value: "50K+" },
               { label: "Món ăn", value: "2,000+" },
@@ -212,14 +214,14 @@ export default function Home() {
       </section>
 
       {/* How It Works - Visual Steps */}
-      <section className="py-32 bg-white">
+      <section className="bg-white py-20 md:py-28 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-4 mb-24">
+          <div className="mb-14 space-y-4 text-center md:mb-20 lg:mb-24">
             <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight">Quy trình 3 bước đơn giản</h2>
             <p className="text-xl text-gray-500 max-w-2xl mx-auto font-medium">Chúng tôi tối ưu hóa mọi công đoạn để bạn tập trung vào việc thưởng thức.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-16 relative">
+          <div className="relative grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-10 lg:gap-16">
             {/* Connecting Line (Desktop) */}
             <div className="hidden md:block absolute top-24 left-0 w-full h-0.5 bg-gray-100 -z-10" />
             
@@ -259,10 +261,10 @@ export default function Home() {
       </section>
 
       {/* Features Showcase - Bento Grid Style */}
-      <section className="py-32 bg-gray-50 overflow-hidden">
+      <section className="overflow-hidden bg-gray-50 py-20 md:py-28 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 bg-white p-12 rounded-[48px] shadow-xl border border-gray-100 flex flex-col justify-between relative overflow-hidden group">
+          <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-12">
+            <div className="group relative flex flex-col justify-between overflow-hidden rounded-[48px] border border-gray-100 bg-white p-8 shadow-xl md:p-10 lg:col-span-8 lg:p-12">
               <div className="relative z-10 max-w-md">
                 <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mb-8">
                   <Zap size={28} />
@@ -278,7 +280,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="lg:col-span-4 bg-orange-500 p-12 rounded-[48px] shadow-xl text-white flex flex-col justify-between relative overflow-hidden">
+            <div className="relative flex flex-col justify-between overflow-hidden rounded-[48px] bg-orange-500 p-8 text-white shadow-xl md:p-10 lg:col-span-4 lg:p-12">
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8">
                   <ShieldCheck size={28} />
@@ -289,7 +291,7 @@ export default function Home() {
               <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mb-16 blur-3xl" />
             </div>
 
-            <div className="lg:col-span-4 bg-gray-900 p-12 rounded-[48px] shadow-xl text-white flex flex-col justify-between">
+            <div className="flex flex-col justify-between rounded-[48px] bg-gray-900 p-8 text-white shadow-xl md:p-10 lg:col-span-4 lg:p-12">
               <div>
                 <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-8">
                   <Heart size={28} className="text-red-500" />
@@ -299,7 +301,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="lg:col-span-8 bg-white p-12 rounded-[48px] shadow-xl border border-gray-100 flex flex-col lg:flex-row items-center gap-12">
+            <div className="flex flex-col items-center gap-10 rounded-[48px] border border-gray-100 bg-white p-8 shadow-xl md:p-10 lg:col-span-8 lg:flex-row lg:gap-12 lg:p-12">
               <div className="flex-1">
                 <h3 className="text-4xl font-black text-gray-900 mb-6">Đội ngũ PT tận tâm</h3>
                 <p className="text-lg text-gray-500 font-medium leading-relaxed mb-8">
@@ -327,9 +329,9 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-32 bg-white">
+      <section className="bg-white py-20 md:py-28 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-end justify-between gap-8 mb-20">
+          <div className="mb-14 flex flex-col gap-6 lg:mb-20 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
             <div className="max-w-2xl space-y-4 text-center lg:text-left">
               <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight">Câu chuyện thành công</h2>
               <p className="text-xl text-gray-500 font-medium">Họ đã thay đổi, còn bạn thì sao?</p>
@@ -340,7 +342,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
             {[
               { name: "Nguyễn Văn A", role: "Nhân viên văn phòng", text: "FitBite đã giúp tôi giảm 5kg trong vòng 2 tháng mà không cảm thấy mệt mỏi nhờ thực đơn rất đa dạng.", img: "https://i.pravatar.cc/150?img=11" },
               { name: "Trần Thị B", role: "Kinh doanh tự do", text: "Việc kết nối với PT qua app rất tiện lợi. Tôi có thể tập luyện và ăn uống theo đúng lộ trình chuyên gia đề ra.", img: "https://i.pravatar.cc/150?img=32" },
@@ -365,17 +367,17 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto bg-orange-500 rounded-[64px] p-12 md:p-24 text-center text-white relative overflow-hidden">
-          <div className="relative z-10 space-y-10">
-            <h2 className="text-5xl md:text-7xl font-black tracking-tight leading-none">Sẵn sàng để thay đổi?</h2>
+      <section className="px-4 py-16 md:py-20">
+        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[48px] bg-orange-500 p-8 text-center text-white md:rounded-[64px] md:p-16 lg:p-24">
+          <div className="relative z-10 space-y-8 md:space-y-10">
+            <h2 className="text-4xl font-black leading-none tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">Sẵn sàng để thay đổi?</h2>
             <p className="text-xl text-orange-100 max-w-2xl mx-auto font-medium">Đăng ký ngay hôm nay để nhận được lộ trình dinh dưỡng miễn phí cho tuần đầu tiên.</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
               <Link to="/register" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto bg-white text-orange-500 hover:bg-orange-50 rounded-2xl px-12 h-16 text-xl font-black shadow-2xl">Đăng ký miễn phí</Button>
+                <Button size="lg" className="h-14 w-full rounded-2xl bg-white px-8 text-lg font-black text-orange-500 shadow-2xl hover:bg-orange-50 sm:h-16 sm:w-auto sm:px-12 sm:text-xl">Đăng ký miễn phí</Button>
               </Link>
               <Link to="/login" className="w-full sm:w-auto">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto border-white text-white hover:bg-white/10 rounded-2xl px-12 h-16 text-xl font-black">Đăng nhập</Button>
+                <Button variant="outline" size="lg" className="h-14 w-full rounded-2xl border-white px-8 text-lg font-black text-white hover:bg-white/10 sm:h-16 sm:w-auto sm:px-12 sm:text-xl">Đăng nhập</Button>
               </Link>
             </div>
           </div>
@@ -388,9 +390,9 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white pt-32 pb-12 border-t border-gray-100">
+      <footer className="border-t border-gray-100 bg-white pt-20 pb-10 md:pt-24 lg:pt-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-24">
+          <div className="mb-14 grid grid-cols-1 gap-12 md:mb-20 md:grid-cols-4 md:gap-10 lg:gap-16">
             <div className="space-y-8">
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
@@ -434,7 +436,7 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          <div className="pt-12 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex flex-col items-center justify-between gap-5 border-t border-gray-100 pt-10 md:flex-row md:gap-6 md:pt-12">
             <p className="text-gray-400 text-sm font-medium">© 2026 FitBite. All rights reserved.</p>
             <div className="flex gap-8">
               <a href="#" className="text-gray-400 hover:text-gray-900 text-sm font-medium transition-colors">Privacy</a>
@@ -448,7 +450,7 @@ export default function Home() {
       {/* Recommendation Modal */}
       <AnimatePresence>
         {showRecommendation && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -460,16 +462,16 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white rounded-[48px] shadow-2xl max-w-lg w-full p-8 md:p-12 overflow-hidden"
+              className="relative w-full max-w-lg overflow-hidden rounded-[36px] bg-white p-6 shadow-2xl sm:rounded-[42px] sm:p-8 md:rounded-[48px] md:p-12"
             >
               <button 
                 onClick={() => setShowRecommendation(false)}
-                className="absolute top-8 right-8 p-2 text-gray-400 hover:text-gray-900 transition-colors"
+                className="absolute top-5 right-5 p-2 text-gray-400 transition-colors hover:text-gray-900 sm:top-6 sm:right-6 md:top-8 md:right-8"
               >
                 <X size={28} />
               </button>
 
-              <div className="space-y-10">
+              <div className="space-y-8 md:space-y-10">
                 <div className="text-center space-y-4">
                   <div className="w-20 h-20 bg-orange-100 text-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
                     <Sparkles size={40} />
@@ -478,11 +480,11 @@ export default function Home() {
                   <p className="text-gray-500 font-medium">Hệ thống sẽ dựa trên mục tiêu giảm cân của bạn để lên thực đơn phù hợp.</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4 sm:gap-5 md:gap-6">
                   <button
                     onClick={() => setRecType('day')}
                     className={cn(
-                      "p-8 rounded-[32px] border-4 transition-all flex flex-col items-center gap-4",
+                      "flex flex-col items-center gap-4 rounded-[28px] border-4 p-5 transition-all sm:rounded-[30px] sm:p-6 md:rounded-[32px] md:p-8",
                       recType === 'day' ? "border-orange-500 bg-orange-50" : "border-gray-50 hover:border-orange-200"
                     )}
                   >
@@ -492,7 +494,7 @@ export default function Home() {
                   <button
                     onClick={() => setRecType('week')}
                     className={cn(
-                      "p-8 rounded-[32px] border-4 transition-all flex flex-col items-center gap-4",
+                      "flex flex-col items-center gap-4 rounded-[28px] border-4 p-5 transition-all sm:rounded-[30px] sm:p-6 md:rounded-[32px] md:p-8",
                       recType === 'week' ? "border-orange-500 bg-orange-50" : "border-gray-50 hover:border-orange-200"
                     )}
                   >
