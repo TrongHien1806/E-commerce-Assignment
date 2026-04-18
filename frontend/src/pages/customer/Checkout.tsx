@@ -29,11 +29,33 @@ export default function Checkout() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().slice(0, 10);
+  });
   const [note, setNote] = useState('');
 
+  const minDeliveryDate = new Date().toISOString().slice(0, 10);
+
   const handleCheckout = async () => {
+    if (paymentMethod !== 'cod') {
+      setErrorMessage('Chức năng thanh toán VNPay/MoMo hiện đang trong quá trình phát triển, vui lòng chọn thanh toán bằng COD.');
+      return;
+    }
+
     if (!address.trim()) {
       setErrorMessage('Vui lòng nhập địa chỉ nhận hàng trước khi thanh toán.');
+      return;
+    }
+
+    if (!deliveryDate) {
+      setErrorMessage('Vui lòng chọn ngày giao hàng.');
+      return;
+    }
+
+    if (deliveryDate < minDeliveryDate) {
+      setErrorMessage('Ngày giao hàng không hợp lệ. Vui lòng chọn từ hôm nay trở đi.');
       return;
     }
 
@@ -47,12 +69,9 @@ export default function Checkout() {
       setErrorMessage(null);
       setIsProcessing(true);
 
-      const today = new Date();
-      today.setDate(today.getDate() + 1);
-
       await api.post('/orders', {
         deliveryAddress: address.trim(),
-        deliveryDate: today.toISOString(),
+        deliveryDate: `${deliveryDate}T12:00:00.000Z`,
         packageType: 'ONE_DAY',
         cartType: 'FOOD',
         distanceKm: 0,
@@ -89,6 +108,15 @@ export default function Checkout() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input label="Họ và tên" placeholder="Nguyễn Văn A" value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 <Input label="Số điện thoại" placeholder="0901234567" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <div>
+                  <Input
+                    label="Ngày giao hàng"
+                    type="date"
+                    value={deliveryDate}
+                    min={minDeliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                  />
+                </div>
                 <div className="md:col-span-2">
                   <Input
                     label="Địa chỉ nhận hàng"
@@ -121,7 +149,14 @@ export default function Checkout() {
                 ].map((method) => (
                   <button
                     key={method.id}
-                    onClick={() => setPaymentMethod(method.id)}
+                    onClick={() => {
+                      setPaymentMethod(method.id);
+                      if (method.id === 'vnpay' || method.id === 'momo') {
+                        setErrorMessage('Chức năng thanh toán VNPay/MoMo hiện đang trong quá trình phát triển, vui lòng chọn thanh toán bằng COD.');
+                      } else {
+                        setErrorMessage(null);
+                      }
+                    }}
                     className={cn(
                       "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3",
                       paymentMethod === method.id 
