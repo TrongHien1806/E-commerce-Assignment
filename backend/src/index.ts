@@ -25,9 +25,23 @@ databaseService.connect().then(async () => {
   // await autogenerateTweets()
 })
 const app = express()
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://e-commerce-mauve-xi.vercel.app',
+  'https://e-commerce-git-haobranch-phongwd2311s-projects.vercel.app'
+]
+
 app.use(
   cors({
-    origin: 'http://localhost:3000'
+    origin: function (origin, callback) {
+      // Cho phép các yêu cầu không có origin (như Postman) hoặc nằm trong danh sách allowedOrigins
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true)
+      } else {
+        callback(new Error('CORS chặn: Link này không có quyền truy cập!'))
+      }
+    },
+    credentials: true
   })
 )
 
@@ -44,10 +58,10 @@ app.use('/tracking', trackingRouter)
 app.use('/reviews', reviewsRouter)
 
 // 1. Phải cấp quyền public thư mục 'uploads' thì Frontend mới xem được ảnh
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads'))
 
 // 2. Đăng ký route medias
-app.use('/medias', mediasRouter);
+app.use('/medias', mediasRouter)
 
 app.use('/admin', adminRouter)
 
