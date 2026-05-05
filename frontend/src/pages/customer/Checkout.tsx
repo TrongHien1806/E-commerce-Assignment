@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MapPin, 
@@ -26,6 +26,8 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [shippingFee, setShippingFee] = useState<number | null>(null);
+  const [shippingStatus, setShippingStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -37,6 +39,55 @@ export default function Checkout() {
   const [note, setNote] = useState('');
 
   const minDeliveryDate = new Date().toISOString().slice(0, 10);
+  const discountAmount = 15000;
+  const paymentMap: Record<string, 'COD' | 'VNPay' | 'MoMo'> = {
+    cod: 'COD',
+    vnpay: 'VNPay',
+    momo: 'MoMo'
+  };
+
+  useEffect(() => {
+    const trimmedAddress = address.trim();
+    if (!trimmedAddress || !deliveryDate || deliveryDate < minDeliveryDate) {
+      setShippingFee(null);
+      setShippingStatus('idle');
+      return;
+    }
+
+    let isActive = true;
+    const timer = setTimeout(async () => {
+      setShippingStatus('loading');
+      try {
+        const response = await api.post('/orders/quote', {
+          deliveryAddress: trimmedAddress,
+          deliveryDate: `${deliveryDate}T12:00:00.000Z`,
+          packageType: 'ONE_DAY',
+          cartType: 'FOOD',
+          paymentMethod: paymentMap[paymentMethod] || 'COD'
+        });
+
+        const fee = response?.data?.result?.pricing?.shippingFee;
+        if (!isActive) return;
+
+        if (typeof fee === 'number' && Number.isFinite(fee)) {
+          setShippingFee(fee);
+          setShippingStatus('ready');
+        } else {
+          setShippingFee(null);
+          setShippingStatus('error');
+        }
+      } catch {
+        if (!isActive) return;
+        setShippingFee(null);
+        setShippingStatus('error');
+      }
+    }, 600);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+    };
+  }, [address, deliveryDate, minDeliveryDate, paymentMethod]);
 
   const handleCheckout = async () => {
     if (paymentMethod !== 'cod') {
@@ -59,12 +110,6 @@ export default function Checkout() {
       return;
     }
 
-    const paymentMap: Record<string, 'COD' | 'VNPay' | 'MoMo'> = {
-      cod: 'COD',
-      vnpay: 'VNPay',
-      momo: 'MoMo'
-    };
-
     try {
       setErrorMessage(null);
       setIsProcessing(true);
@@ -74,7 +119,6 @@ export default function Checkout() {
         deliveryDate: `${deliveryDate}T12:00:00.000Z`,
         packageType: 'ONE_DAY',
         cartType: 'FOOD',
-        distanceKm: 0,
         paymentMethod: paymentMap[paymentMethod] || 'COD',
         note: [fullName.trim(), phone.trim(), note.trim()].filter(Boolean).join(' | ')
       });
@@ -87,6 +131,16 @@ export default function Checkout() {
       setErrorMessage(error?.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
     }
   };
+
+  const shippingFeeDisplay =
+    shippingStatus === 'loading'
+      ? 'Đang tính...'
+      : shippingStatus === 'error'
+        ? 'Không tính được'
+        : shippingFee !== null
+          ? `${shippingFee.toLocaleString('vi-VN')}đ`
+          : 'Chưa tính';
+  const totalAmount = shippingFee !== null ? subtotal + shippingFee - discountAmount : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -189,15 +243,17 @@ export default function Checkout() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Phí giao hàng</span>
-                  <span className="font-bold text-gray-900">20.000đ</span>
+                  <span className="font-bold text-gray-900">{shippingFeeDisplay}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Giảm giá</span>
-                  <span className="font-bold text-green-500">-15.000đ</span>
+                  <span className="font-bold text-green-500">-{discountAmount.toLocaleString('vi-VN')}đ</span>
                 </div>
                 <div className="flex justify-between text-2xl pt-4 border-t border-gray-100">
                   <span className="font-bold text-gray-900">Tổng cộng</span>
-                  <span className="font-black text-orange-500">{(subtotal + 20000 - 15000).toLocaleString('vi-VN')}đ</span>
+                  <span className="font-black text-orange-500">
+                    {totalAmount !== null ? `${totalAmount.toLocaleString('vi-VN')}đ` : '--'}
+                  </span>
                 </div>
               </div>
 

@@ -10,7 +10,13 @@ export default function Cart() {
 
   const totalCalories = items.reduce((acc, item) => acc + (item.calories || 0) * item.qty, 0);
 
-  const shippingFee = 20000;
+  const shippingFee: number | null = null;
+  const formatCurrency = (value: number) => `${value.toLocaleString('vi-VN')}đ`;
+  const formatTotal = (base: number, fee: number | null) =>
+    formatCurrency(base + (typeof fee === 'number' ? fee : 0));
+  const shippingFeeLabel = typeof shippingFee === 'number' ? formatCurrency(shippingFee) : 'Chưa tính';
+  const totalLabel = typeof shippingFee === 'number' ? 'Tổng cộng' : 'Tổng cộng (tạm tính)';
+  const totalValue = formatTotal(subtotal, shippingFee);
 
   if (items.length === 0) {
     return (
@@ -107,7 +113,7 @@ export default function Cart() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Phí giao hàng</span>
-                  <span className="font-bold text-gray-900">{shippingFee.toLocaleString('vi-VN')}đ</span>
+                  <span className="font-bold text-gray-900">{shippingFeeLabel}</span>
                 </div>
                 <div className="flex justify-between text-sm pt-4 border-t border-gray-50">
                   <span className="text-gray-500">Tổng Calo</span>
@@ -116,9 +122,14 @@ export default function Cart() {
                   </span>
                 </div>
                 <div className="flex justify-between text-xl pt-4 border-t border-gray-100">
-                  <span className="font-bold text-gray-900">Tổng cộng</span>
-                  <span className="font-black text-orange-500">{(subtotal + shippingFee).toLocaleString('vi-VN')}đ</span>
+                  <span className="font-bold text-gray-900">{totalLabel}</span>
+                  <span className="font-black text-orange-500">{totalValue}</span>
                 </div>
+                {shippingFee === null && (
+                  <p className="text-xs text-gray-400">
+                    Phí giao hàng sẽ được tính ở bước thanh toán.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">

@@ -50,7 +50,7 @@ npm install
 Tạo file `.env` tại thư mục `frontend`:
 
 ```env
-REACT_APP_API_URL=http://localhost:4000
+VITE_API_URL=http://localhost:4000
 ```
 
 Chạy frontend:
