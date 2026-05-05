@@ -16,24 +16,170 @@ import cartService from '~/services/cart.services'
 import databaseService from '~/services/database.services'
 import trackingService from '~/services/tracking.services'
 
-const SHIPPING_BASE_FEE = 20000
-const SHIPPING_BASE_KM = 5
-const SHIPPING_EXTRA_PER_KM = 5000
+const COMBO_FREE_KM = 5
+const COMBO_FLAT_FEE = 20000
+const FOOD_FREE_KM = 2
+const FOOD_EXTRA_PER_KM = 5000
+const DEFAULT_SHIPPING_ORIGIN_LAT = 10.771638
+const DEFAULT_SHIPPING_ORIGIN_LON = 106.657018
+const NOMINATIM_BASE_URL = process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org/search'
+const OSRM_BASE_URL = process.env.OSRM_BASE_URL || 'https://router.project-osrm.org'
+const DEFAULT_NOMINATIM_USER_AGENT = 'ECommerce_Student_Project/1.0'
 
 class OrdersService {
   private readonly WEEKLY_PACKAGE_DAYS = 7
 
-  private calculateShippingForDistance(distanceKm: number): ShippingBreakdown {
+  private calculateShippingForDistance(distanceKm: number, cartType: CartTypeValue): ShippingBreakdown {
     const normalizedDistance = Math.max(0, distanceKm)
-    const extraDistance = Math.max(0, normalizedDistance - SHIPPING_BASE_KM)
-    const extraFee = Math.ceil(extraDistance) * SHIPPING_EXTRA_PER_KM
+    const distanceRounded = Number(normalizedDistance.toFixed(2))
+
+    if (cartType === 'COMBO') {
+      if (normalizedDistance < COMBO_FREE_KM) {
+        return {
+          baseFee: 0,
+          extraFee: 0,
+          totalFee: 0,
+          distanceKm: distanceRounded
+        }
+      }
+
+      return {
+        baseFee: COMBO_FLAT_FEE,
+        extraFee: 0,
+        totalFee: COMBO_FLAT_FEE,
+        distanceKm: distanceRounded
+      }
+    }
+
+    if (normalizedDistance <= FOOD_FREE_KM) {
+      return {
+        baseFee: 0,
+        extraFee: 0,
+        totalFee: 0,
+        distanceKm: distanceRounded
+      }
+    }
+
+    const extraDistance = Math.max(0, normalizedDistance - FOOD_FREE_KM)
+    const extraFee = Math.ceil(extraDistance) * FOOD_EXTRA_PER_KM
 
     return {
-      baseFee: SHIPPING_BASE_FEE,
+      baseFee: 0,
       extraFee,
-      totalFee: SHIPPING_BASE_FEE + extraFee,
-      distanceKm: Number(normalizedDistance.toFixed(2))
+      totalFee: extraFee,
+      distanceKm: distanceRounded
     }
+  }
+
+  private getOriginCoords() {
+    const lat = Number(process.env.SHIPPING_ORIGIN_LAT)
+    const lon = Number(process.env.SHIPPING_ORIGIN_LON)
+
+    return {
+      lat: Number.isFinite(lat) ? lat : DEFAULT_SHIPPING_ORIGIN_LAT,
+      lon: Number.isFinite(lon) ? lon : DEFAULT_SHIPPING_ORIGIN_LON
+    }
+  }
+
+  private async geocodeAddress(address: string): Promise<{ lat: number; lon: number }> {
+    const query = new URLSearchParams({
+      format: 'json',
+      limit: '1',
+      q: address
+    })
+    const userAgent = process.env.NOMINATIM_USER_AGENT?.trim() || DEFAULT_NOMINATIM_USER_AGENT
+
+    let response
+    try {
+      response = await fetch(`${NOMINATIM_BASE_URL}?${query.toString()}`, {
+        headers: {
+          'User-Agent': userAgent
+        }
+      })
+    } catch {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DISTANCE_GEOCODE_FAILED,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    if (!response.ok) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DISTANCE_GEOCODE_FAILED,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const data = await response.json()
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DISTANCE_GEOCODE_NOT_FOUND,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const lat = Number.parseFloat(data[0].lat)
+    const lon = Number.parseFloat(data[0].lon)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DISTANCE_GEOCODE_NOT_FOUND,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    console.info('[shipping] geocode result', {
+      address,
+      lat,
+      lon
+    })
+
+    return { lat, lon }
+  }
+
+  private async getDistanceKmFromAddress(destinationAddress: string): Promise<number> {
+    const originCoords = this.getOriginCoords()
+    const destCoords = await this.geocodeAddress(destinationAddress)
+    const osrmUrl = `${OSRM_BASE_URL}/route/v1/driving/${originCoords.lon},${originCoords.lat};${destCoords.lon},${destCoords.lat}?overview=false`
+
+    let response
+    try {
+      response = await fetch(osrmUrl)
+    } catch {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DISTANCE_ROUTE_FAILED,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    if (!response.ok) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DISTANCE_ROUTE_FAILED,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const data = await response.json()
+    const distanceMeters = data?.routes?.[0]?.distance
+    if (data?.code !== 'Ok' || typeof distanceMeters !== 'number') {
+      console.warn('[shipping] osrm response invalid', {
+        code: data?.code,
+        routes: Array.isArray(data?.routes) ? data.routes.length : 0,
+        distanceMeters
+      })
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.DISTANCE_ROUTE_NOT_FOUND,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+
+    const distanceKm = distanceMeters / 1000
+    console.info('[shipping] osrm distance', {
+      origin: originCoords,
+      destination: destCoords,
+      distanceKm
+    })
+
+    return distanceKm
   }
 
   private toValidDate(value: string, invalidMessage: string) {
@@ -103,7 +249,18 @@ class OrdersService {
     const packageType: PackageType = payload.packageType || 'ONE_DAY'
     const deliveryDate = this.toValidDate(payload.deliveryDate, USERS_MESSAGES.DELIVERY_DATE_IS_REQUIRED)
     const schedule = this.buildDeliverySchedule(deliveryDate, packageType)
-    const shippingBreakdown = this.calculateShippingForDistance(Number(payload.distanceKm ?? 0))
+    const distanceKm =
+      payload.distanceKm !== undefined
+        ? Number(payload.distanceKm)
+        : await this.getDistanceKmFromAddress(payload.deliveryAddress)
+    console.info('[shipping] quote inputs', {
+      address: payload.deliveryAddress,
+      cartType,
+      distanceKm
+    })
+
+    const shippingBreakdown = this.calculateShippingForDistance(distanceKm, cartType)
+    console.info('[shipping] breakdown', shippingBreakdown)
     const shippingBreakdowns = schedule.map(() => shippingBreakdown)
     const shippingFee = shippingBreakdowns.reduce((sum, item) => sum + item.totalFee, 0)
     const subtotal = cart.summary.subtotal * schedule.length

@@ -18,12 +18,12 @@ npm install
 Tạo file `.env` trong thư mục `frontend`:
 
 ```env
-REACT_APP_API_URL=http://localhost:4000
+VITE_API_URL=http://localhost:4000
 ```
 
 Ghi chú:
 - Nếu không khai báo, hệ thống sẽ dùng mặc định: `https://e-commerce-7jh5.onrender.com`.
-- Dự án đang đọc `process.env.REACT_APP_API_URL` trong `src/services/api.ts`.
+- Dự án đang đọc `import.meta.env.VITE_API_URL` trong `src/services/api.ts`.
 
 ## Chạy dự án
 

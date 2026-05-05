@@ -29,6 +29,7 @@ const ordersRouter = Router()
  * Method: POST
  * Header: { Authorization: Bearer <access_token> }
  * Body: { deliveryAddress: string, deliveryDate: string, packageType?: 'ONE_DAY' | 'WEEKLY_7D', cartType?: 'FOOD' | 'COMBO', distanceKm?: number, note?: string, paymentMethod: 'COD' | 'VNPay' | 'MoMo' }
+ * Note: Neu khong truyen distanceKm, backend se tu tinh khoang cach tu dia chi mac dinh.
  */
 ordersRouter.post('/quote', accessTokenValidator, quoteOrderValidator, wrapRequestHandler(quoteOrderController))
 

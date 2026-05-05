@@ -1,8 +1,10 @@
 import axios from "axios";
 
+const legacyBaseUrl = typeof process !== 'undefined' ? process.env.REACT_APP_API_URL : undefined;
+const apiBaseUrl = import.meta.env.VITE_API_URL || legacyBaseUrl || "https://e-commerce-7jh5.onrender.com";
+
 const api = axios.create({
-  baseURL:
-    process.env.REACT_APP_API_URL || "https://e-commerce-7jh5.onrender.com",
+  baseURL: apiBaseUrl,
 });
 
 // Request Interceptor: Gắn Access Token vào header
