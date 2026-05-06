@@ -28,6 +28,12 @@ export default function Checkout() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [shippingFee, setShippingFee] = useState<number | null>(null);
   const [shippingStatus, setShippingStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    phone?: string;
+    address?: string;
+    deliveryDate?: string;
+  }>({});
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -94,19 +100,41 @@ export default function Checkout() {
       setErrorMessage('Chức năng thanh toán VNPay/MoMo hiện đang trong quá trình phát triển, vui lòng chọn thanh toán bằng COD.');
       return;
     }
+    const trimmedName = fullName.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedAddress = address.trim();
+    const normalizedPhone = trimmedPhone.replace(/\s+/g, '');
+    const nextErrors: {
+      fullName?: string;
+      phone?: string;
+      address?: string;
+      deliveryDate?: string;
+    } = {};
 
-    if (!address.trim()) {
-      setErrorMessage('Vui lòng nhập địa chỉ nhận hàng trước khi thanh toán.');
-      return;
+    if (!trimmedName) {
+      nextErrors.fullName = 'Vui lòng nhập họ và tên.';
+    }
+
+    if (!normalizedPhone) {
+      nextErrors.phone = 'Vui lòng nhập số điện thoại.';
+    } else if (!/^(0|\+84)\d{9,10}$/.test(normalizedPhone)) {
+      nextErrors.phone = 'Số điện thoại không hợp lệ.';
+    }
+
+    if (!trimmedAddress) {
+      nextErrors.address = 'Vui lòng nhập địa chỉ nhận hàng.';
     }
 
     if (!deliveryDate) {
-      setErrorMessage('Vui lòng chọn ngày giao hàng.');
-      return;
+      nextErrors.deliveryDate = 'Vui lòng chọn ngày giao hàng.';
+    } else if (deliveryDate < minDeliveryDate) {
+      nextErrors.deliveryDate = 'Ngày giao hàng không hợp lệ. Vui lòng chọn từ hôm nay trở đi.';
     }
 
-    if (deliveryDate < minDeliveryDate) {
-      setErrorMessage('Ngày giao hàng không hợp lệ. Vui lòng chọn từ hôm nay trở đi.');
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrorMessage('Vui lòng kiểm tra lại thông tin giao hàng.');
       return;
     }
 
@@ -160,15 +188,43 @@ export default function Checkout() {
                 <MapPin size={24} className="text-orange-500" /> Thông tin giao hàng
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Họ và tên" placeholder="Nguyễn Văn A" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                <Input label="Số điện thoại" placeholder="0901234567" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Input
+                  label="Họ và tên"
+                  placeholder="Nguyễn Văn A"
+                  value={fullName}
+                  error={fieldErrors.fullName}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    if (fieldErrors.fullName) {
+                      setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+                    }
+                  }}
+                />
+                <Input
+                  label="Số điện thoại"
+                  placeholder="0901234567"
+                  value={phone}
+                  error={fieldErrors.phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (fieldErrors.phone) {
+                      setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                    }
+                  }}
+                />
                 <div>
                   <Input
                     label="Ngày giao hàng"
                     type="date"
                     value={deliveryDate}
                     min={minDeliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    error={fieldErrors.deliveryDate}
+                    onChange={(e) => {
+                      setDeliveryDate(e.target.value);
+                      if (fieldErrors.deliveryDate) {
+                        setFieldErrors((prev) => ({ ...prev, deliveryDate: undefined }));
+                      }
+                    }}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -176,7 +232,13 @@ export default function Checkout() {
                     label="Địa chỉ nhận hàng"
                     placeholder="Số 123, Đường ABC, Quận XYZ, TP. HCM"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    error={fieldErrors.address}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      if (fieldErrors.address) {
+                        setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                      }
+                    }}
                   />
                 </div>
                 <div className="md:col-span-2">
